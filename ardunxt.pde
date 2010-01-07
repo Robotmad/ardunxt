@@ -35,15 +35,15 @@
 #include <avr/io.h>
 
 //#define Start_Byte 0x0E //Used to read the EEPROM
-#define TITLE_STRING  "NXT Universal RC Interface"
-#define VERSION_STRING  " V1.01"
+#define TITLE_STRING  "ArduNXT Universal RC Interface"
+#define VERSION_STRING  " V1.02"
 #define SERIAL_BAUD  (57600)
 
 // Some of the code has been migrated from a previous project which uses the following type definitions:
 typedef signed char   INT_8;
 typedef unsigned char UINT_8;
 typedef unsigned int  UINT_16;
-typedef unsigned long UINT_24;  // Not sure that there is any way to get a 24 bit type in Arduino?
+typedef unsigned long UINT_24;  // Not sure that there is any way to get a true 24 bit type in Arduino?
 typedef unsigned long UINT_32;
 typedef signed long   INT_32;
 

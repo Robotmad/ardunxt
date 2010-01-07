@@ -329,13 +329,10 @@ ISR(PCINT2_vect)
 // TODO add timeout for no signal (configuration fow what to do in this case - return NO_VALUE, last know, center?
 void RCInput_Handler(void)
 {
-  static  unsigned int u16nop = 0;
-
-  static 	unsigned int u16Pulse;    // Static as that usually gives faster code
+  static  unsigned int u16Pulse;    // Static as that usually gives faster code
   static  unsigned int u16PFall;
   static  unsigned int u16PRise;
-  byte	i;
-  bool    b = FALSE;
+  byte	               i;
 
   // Loop over outstanding active channels 
   for (i = 0U; i < NUM_PWMI; i++)
@@ -416,27 +413,9 @@ void RCInput_Handler(void)
           //Serial.println((int)u16Pulse);
         }
         Serial.print(" ");
-        b = TRUE;
       }
     }
   }
-  if (b)
-  {
-    Serial.println(u16nop);
-    u16nop = 0;  
-    //  TEMP
-    // pass values on to the PWM output - swapped around so we can see if jitter is input or output
-    pulse_servo_0(RCInput_RawCh(0));
-    pulse_servo_1(RCInput_RawCh(1));
-    pulse_servo_2(RCInput_RawCh(2));
-    pulse_servo_3(RCInput_RawCh(3));
-    //
-  }
-  else
-  {
-    u16nop++;  
-  }
-  // period monitoring for failsafe
 }
 
 

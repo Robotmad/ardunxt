@@ -57,6 +57,9 @@ typedef union {
     unsigned bGPS:1;
     unsigned bRCInput:1;
     unsigned bServoOutput:1;
+    unsigned bNXTinterface:1;
+    unsigned bDigitalInput:1;
+    unsigned bDigitalOutput:1;
   };
   struct {
     UINT_8 u8Value;
@@ -148,7 +151,7 @@ void loop()                        //Main Loop
   NXTHandler();
 //  Serial.println(millis()-u32time);
 
-  if (g_DiagnosticsFlags.bRCInput) RCInput_Monitor();
+  if (g_DiagnosticsFlags.bDigitalInput) DigitalInput_Monitor();
 }
 
 

@@ -346,7 +346,7 @@ void RCInput_Handler(void)
       // compiler to do some of the address manipulation here first.  
       volatile RCINPUT_FLAGS  *pRCIFlags = &g_RCIFlags[i];
 
-      Serial.print((int)i);
+      //Serial.print((int)i);
       //Serial.print(":");
 
       // Both rise and fall edges have been timestamped
@@ -357,12 +357,13 @@ void RCInput_Handler(void)
       if (pRCIFlags->bWrap)
       {
         // Timer1 wraped around during the pulse measurement - compensate result
-        Serial.print("+");
+        //Serial.print("+");
         u16PFall += PWM_PERIOD;  // Can't overflow 16 bits for valid pulse widths
       }
       if (pRCIFlags->bLost)
       {
-        Serial.println("***LostPulse***");
+        Serial.print((int)i);
+        Serial.println(" ***LostPulse***");
       }
 
       // It is just possible that while we copied the timestamps we started to measure a new pulse
@@ -375,7 +376,8 @@ void RCInput_Handler(void)
       {
         // One of the flags has been cleared so a new pulse is being measured
         sei();  // Re-enable interrupts
-        Serial.println("***MidPulse***");
+        Serial.print((int)i);
+        Serial.println(" ***MidPulse***");
       }
       else
       {
@@ -398,21 +400,26 @@ void RCInput_Handler(void)
         if (MIN_PULSE_WIDTH > u16Pulse)
         {
           // Pulse Too Short
-          Serial.print("t<");
-          Serial.print(MIN_PULSE_WIDTH);
+          Serial.print((int)i);
+          Serial.print(" t<");
+          Serial.println(MIN_PULSE_WIDTH);
         }
         else if (u16Pulse > MAX_PULSE_WIDTH)
         {
           // Pulse Too Long	
-          Serial.print("t>");
-          Serial.print(MAX_PULSE_WIDTH);
+          Serial.print((int)i);
+          Serial.print(" t>");
+          Serial.println(MAX_PULSE_WIDTH);
         }	
         else
         {
           g_u16Pulse[i] = u16Pulse;
           //Serial.println((int)u16Pulse);
+
+          // TEMP TESTING
+          ServoOutput(i, u16Pulse);
         }
-        Serial.print(" ");
+        //Serial.print(" ");
       }
     }
   }

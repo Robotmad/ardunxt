@@ -159,6 +159,30 @@ ISR(TIMER2_OVF_vect, ISR_NAKED)
 }
 #endif
 
+
+
+void ServoOutput(byte u8Ch, unsigned int u16PulseWidth)
+{
+  switch (u8Ch)
+  {
+    case 0:
+    pulse_servo_0(u16PulseWidth);
+    break;
+
+    case 1:
+    pulse_servo_1(u16PulseWidth);
+    break;
+
+    case 2:
+    pulse_servo_2(u16PulseWidth);
+    break;
+
+    case 3:
+    pulse_servo_3(u16PulseWidth);
+    break;
+  }
+}
+
 /**************************************************************
  * Function to set servo 0 pulse width
  ***************************************************************/

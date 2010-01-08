@@ -371,7 +371,7 @@ static void NXTUpdateValues(void)
 {
   // Examples
   // ========
-  m_NXTInterfaceData.Fields.u8MuxMode = RCInput_Switch();
+  m_NXTInterfaceData.Fields.u8MuxMode = DigitalInput_Switch();
   
   if (TRUE)
   {

@@ -10,7 +10,7 @@
 //   L = 1
 //   H = 2
 //
-byte RCInput_Switch(void)
+byte DigitalInput_Switch(void)
 {
   // Read MUX input
   if(digitalRead(4) == HIGH)
@@ -33,11 +33,11 @@ byte RCInput_Switch(void)
 }
 
 
-void RCInput_Monitor(void)
+void DigitalInput_Monitor(void)
 {
   static byte m_u8LastMode;
   
-  byte u8Mode = RCInput_Switch();
+  byte u8Mode = DigitalInput_Switch();
   
   if (m_u8LastMode != u8Mode)
   {

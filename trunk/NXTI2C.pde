@@ -312,7 +312,7 @@ void NXTOnReceive(int NumBytesReceived)
 
 
 // Handler to synchronise data between NXT shared memory and other parts of the system
-void NXTHandler(void)
+void NXT_Handler(void)
 {
 	if (m_bNXTAlive)
 	{
@@ -371,7 +371,7 @@ static void NXTUpdateValues(void)
 {
   // Examples
   // ========
-  m_NXTInterfaceData.Fields.u8MuxMode = DigitalInput_Switch();
+  m_NXTInterfaceData.Fields.u8MuxMode = Multiplexer_State();
   
   if (TRUE)
   {

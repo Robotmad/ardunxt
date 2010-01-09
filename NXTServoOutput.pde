@@ -287,9 +287,5 @@ void pulse_servo_3(unsigned int u16PulseWidth)
 }
 
 
-// TODO high level functions to do angle to pulse conversion
-// centre control, range control, reverse...
-
-
 
 

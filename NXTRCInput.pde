@@ -4,8 +4,8 @@
 // timeout
 // failsafe
 
-#define MAX_PULSE_WIDTH		(2000)					// uS Maximum pulse width considered as valid
-#define MIN_PULSE_WIDTH		(1000)					// uS Minimum pulse width considered as valid
+#define MAX_PULSE_WIDTH		(2200)					// uS Maximum pulse width considered as valid
+#define MIN_PULSE_WIDTH		(800)					// uS Minimum pulse width considered as valid
 #define DFLT_PWMI_CENTRE        (1500)                                  // uS Default center pulse width
 #define PWM_PERIOD		(40000)                                 // PWM Output period (MUST be in sync with value used to set up T1)
 
@@ -39,7 +39,7 @@ volatile unsigned int					 g_u16PRise[NUM_PWMI];
 volatile unsigned int					 g_u16PFall[NUM_PWMI];
 unsigned int						 g_u16Pulse[NUM_PWMI];
 unsigned int                                             g_u16Centre[NUM_PWMI]; 
-
+unsigned int                                             m_u16ValidFrames; 
 
 /**************************************************************
  * Configuring the RC Input channels  
@@ -80,7 +80,19 @@ void Init_RCInputCh(void)
     g_RCIFlags[i].u8Value = 0U;         
   }
 
+  m_u16ValidFrames = 0;
   sei();                                  // Enabling interrupts
+}
+
+
+unsigned int RCInput_ValidFrames(void)
+{
+  if (60000 < m_u16ValidFrames)
+  {
+    // Prevent overflow
+    m_u16ValidFrames = 60000;
+  }
+  return(m_u16ValidFrames);
 }
 
 /**************************************************************
@@ -400,6 +412,7 @@ void RCInput_Handler(void)
         if (MIN_PULSE_WIDTH > u16Pulse)
         {
           // Pulse Too Short
+          m_u16ValidFrames = 0;
           Serial.print((int)i);
           Serial.print(" t<");
           Serial.println(MIN_PULSE_WIDTH);
@@ -407,17 +420,19 @@ void RCInput_Handler(void)
         else if (u16Pulse > MAX_PULSE_WIDTH)
         {
           // Pulse Too Long	
+          m_u16ValidFrames = 0;
           Serial.print((int)i);
           Serial.print(" t>");
           Serial.println(MAX_PULSE_WIDTH);
         }	
         else
         {
+          m_u16ValidFrames++;  // TEMP - this actaully counts each valid pulse as a frame - needs refining
           g_u16Pulse[i] = u16Pulse;
           //Serial.println((int)u16Pulse);
 
-          // TEMP TESTING
-          ServoOutput(i, u16Pulse);
+          // TEMP TESTING - invert signal
+          ServoOutput(i, 3000 - (INT_16)u16Pulse);
         }
         //Serial.print(" ");
       }

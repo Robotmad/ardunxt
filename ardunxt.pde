@@ -34,32 +34,37 @@
 #include <avr/eeprom.h>
 #include <avr/io.h>
 
-//#define Start_Byte 0x0E //Used to read the EEPROM
-#define TITLE_STRING  "ArduNXT Universal RC Interface"
+#define TITLE_STRING    "ArduNXT Universal RC Interface"
 #define VERSION_STRING  " V1.02"
-#define SERIAL_BAUD  (57600)
+#define SERIAL_BAUD     (57600)
 
 // Some of the code has been migrated from a previous project which uses the following type definitions:
 typedef signed char   INT_8;
 typedef unsigned char UINT_8;
+typedef signed int    INT_16;
 typedef unsigned int  UINT_16;
 typedef unsigned long UINT_24;  // Not sure that there is any way to get a true 24 bit type in Arduino?
-typedef unsigned long UINT_32;
 typedef signed long   INT_32;
+typedef unsigned long UINT_32;
 
+#ifndef TRUE
 #define TRUE          (0x01)
+#endif
+#ifndef FALSE
 #define FALSE         (0x00)
-
+#endif
 
 // Flags to control which Diagnostics outputs we want to see on the serial port
 typedef union {
   struct {
-    unsigned bGPS:1;
-    unsigned bRCInput:1;
-    unsigned bServoOutput:1;
-    unsigned bNXTinterface:1;
-    unsigned bDigitalInput:1;
-    unsigned bDigitalOutput:1;
+    unsigned bGPS:1;                // GPS decoding
+    unsigned bRCInput:1;            // RC Input
+    unsigned bServoOutput:1;        // Servo Output
+    unsigned bNXTInterface:1;       // I2C NXT interface
+    unsigned bMultiplexer:1;        // Multiplexer state
+    unsigned bDigitalInput:1;       // Digital Inputs 
+    unsigned bDigitalOutput:1;      // Digital Outputs
+    unsigned bPerformance:1;        // Software performance metrics
   };
   struct {
     UINT_8 u8Value;
@@ -67,7 +72,7 @@ typedef union {
 } DiagnosticsFlags;
 
 
-// Flags to indicate which aspects of the GPS Record have been received
+// Flags to indicate which aspects of the GPS data have been received
 typedef union {
   struct {
 //  unsigned bDate:1;  
@@ -99,6 +104,7 @@ typedef struct
 } GPSRecord;
 
 
+
 // Where things are stored in EEPROM
 #define EE_DIAGNOSTICS_FLAGS    (0x01)
 
@@ -107,17 +113,10 @@ typedef struct
 /***************************************************************************
  General variables
  **************************************************************************/
-/*
-float analog0=511; //Roll Analog  
-float analog1=511; //Pitch Analog
-float analog2=511; //Z Analog
-float analog3=511; //I have to change this name is the airspeed sensor... SOON! 
-unsigned int rx_Ch[2];
-*/
-
 GPSRecord	        		 m_GPSNew;
 GPSMsgFlags	        		 g_GPSMsgFlags;
 DiagnosticsFlags                         g_DiagnosticsFlags;
+
 
 /***************************************************************************
 
@@ -125,35 +124,21 @@ DiagnosticsFlags                         g_DiagnosticsFlags;
 void setup()
 {
   Init_NXTUniversalRCInterface();  //Initialize application...
+  Init_Diagnostics();
 }
+
 
 void loop()                        //Main Loop
 {
-//  unsigned long u32time;
-
-//  u32time = millis();
-//  Serial.print("C");
   RCInput_Handler();
-//  Serial.print(millis()-u32time);
-
-//  u32time = millis();
-//  Serial.print(" A");
-//  catch_analogs(); //Reads and average the sensors when is doing nothing... Function localted in "Sensors" tab.
-//  Serial.print(millis()-u32time);
-
-//  u32time = millis();
-//  Serial.print(" G");
+//Analogue_Handler();
   GPS_Handler();
-//  Serial.print(millis()-u32time);
-
-//  u32time = millis();
-//  Serial.print(" X");
-  NXTHandler();
-//  Serial.println(millis()-u32time);
-
+  NXT_Handler();
+  Multiplexer_Handler();
+  
   if (g_DiagnosticsFlags.bDigitalInput) DigitalInput_Monitor();
+  if (g_DiagnosticsFlags.bPerformance)  Diagnostics_Handler();
 }
-
 
 
 /*****************************************
@@ -166,8 +151,8 @@ void Init_NXTUniversalRCInterface(void)
   // PD1 = RS232 Serial Data output
 //  pinMode(2,INPUT);      // RC Input pin 0
 //  pinMode(3,INPUT);      // RC Input pin 1
-  pinMode(4,INPUT);      // MUX input pin from ATTiny [to be dropped in final hardware]
-  pinMode(5,INPUT);      // Mode input pin from ATTiny [to be dropped in final hardware]
+//  pinMode(4,INPUT);      // MUX input pin from ATTiny [to be dropped in final hardware]
+//  pinMode(5,INPUT);      // Mode input pin from ATTiny [to be dropped in final hardware]
 //  pinMode(6,INPUT);      // RC Input pin 2
 // Servo outputs are configured as such within the ServoOutput module  
 //  pinMode(7,OUTPUT);     // Servo output pin 3
@@ -192,10 +177,10 @@ void Init_NXTUniversalRCInterface(void)
   Load_Settings();//Loading saved settings
   
   //TEMP
-  g_DiagnosticsFlags.u8Value = 0x03;  // Turn on all diagnostics of interest
+  g_DiagnosticsFlags.u8Value = 0xFB;  // Turn on all diagnostics of interest
   
   Save_Settings();
-  
+  Init_Multiplexer();
   Init_RCInputCh();
   Init_ServoOutput();
   Init_NXTIIC();

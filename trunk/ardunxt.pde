@@ -1,8 +1,7 @@
-#include <Wire.h>
-// WARNING - at present this code requires a modified version of WIRE and TWI 
-// I need to find out how to get this version used by default or replace them with new code.
-// Serial output is unbuffered so be careful about the impact that lots of diagnostics has on performance.
-
+/* ArduNXT - Arduino based Lego Mondstorms NXT universal Remote Control Interface */
+/* Please see http://code.google.com/p/ardunxt/ for further details and the latest version */
+/* By Christopher Barnes */
+/* 
 /*
 // Aspects of this software were derived from code used in ArduPilot
    By Chris Anderson, Jordi Munoz
@@ -17,12 +16,21 @@
   -Remzibi
 */
 
+// WARNING - at present this code requires a modified version of WIRE and TWI 
+// I need to find out how to get this version used by default or replace them with new code.
+
+// Standard Arduino Serial output is unbuffered so be careful about the impact that lots of diagnostics has on performance.
+// You might like to try an alternative version of the HardwareSerial.h and HardwareSerial.cpp, by Kiril available from:
+// Arduino Forum > Software > Development, at
+// http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?board=dev
+// Search for "Improved HardwareSerial" and use these new files to replace those in hardware/arduino/cores/arduino 
+// There should be enough memory on the ATMEGA328 to increase the buffer sizes too.  These are defined in HardwareSerial.h:
+// #define USART_RX_BUFFER_SIZE  (64)
+// #derine USART_TX_BUFFER_SIZE  (64)
+
 
 //TODO
-// DONE Get PWM in and out to use a common range
 // consider RC working - in control of MUX/Mode, no RC input - need to take control of PWM outputs
-// eliminate need for ATTiny
-// DONE increase number of PWMin and out (coarse for Failsafe input?)
 // Commands from NXT:
 //  set centre
 //  save config
@@ -30,13 +38,16 @@
 // Single status byte for NXT to read to say if anything has changed (bitmap of what?)
 // Double buffer GPS data so that you can read it all without risk of partial update...
 
+#include <Wire.h>
 #include <avr/interrupt.h>
 #include <avr/eeprom.h>
 #include <avr/io.h>
 
 #define TITLE_STRING    "ArduNXT Universal RC Interface"
-#define VERSION_STRING  " V1.02"
+#define VERSION_STRING  " V1.03"
 #define SERIAL_BAUD     (57600)
+
+
 
 // Some of the code has been migrated from a previous project which uses the following type definitions:
 typedef signed char   INT_8;
@@ -53,6 +64,7 @@ typedef unsigned long UINT_32;
 #ifndef FALSE
 #define FALSE         (0x00)
 #endif
+
 
 // Flags to control which Diagnostics outputs we want to see on the serial port
 typedef union {
@@ -123,19 +135,23 @@ DiagnosticsFlags                         g_DiagnosticsFlags;
  **************************************************************************/
 void setup()
 {
-  Init_NXTUniversalRCInterface();  //Initialize application...
-  Init_Diagnostics();
+  Init_NXTUniversalRCInterface();  // Initialize application...
+  Init_Diagnostics();              // Initialise diagnostics output
 }
 
 
+// Main loop executed as fast as possible
 void loop()                        //Main Loop
 {
+  // Each "Handler" is designed to do a small amount of processing each time it is called in
+  // a co-operative approach to multi-tasking.
   RCInput_Handler();
 //Analogue_Handler();
   GPS_Handler();
   NXT_Handler();
   Multiplexer_Handler();
   
+  // Support for development diagnostics and debugging information output
   if (g_DiagnosticsFlags.bDigitalInput) DigitalInput_Monitor();
   if (g_DiagnosticsFlags.bPerformance)  Diagnostics_Handler();
 }
@@ -151,11 +167,10 @@ void Init_NXTUniversalRCInterface(void)
   // PD1 = RS232 Serial Data output
 //  pinMode(2,INPUT);      // RC Input pin 0
 //  pinMode(3,INPUT);      // RC Input pin 1
-//  pinMode(4,INPUT);      // MUX input pin from ATTiny [to be dropped in final hardware]
-//  pinMode(5,INPUT);      // Mode input pin from ATTiny [to be dropped in final hardware]
+//  pinMode(4,INPUT);      // MUX output
+//  pinMode(5,INPUT);      // Servo output pin 3
 //  pinMode(6,INPUT);      // RC Input pin 2
-// Servo outputs are configured as such within the ServoOutput module  
-//  pinMode(7,OUTPUT);     // Servo output pin 3
+//  pinMode(7,OUTPUT);     // GPS RX Input Mux output can we afford to spare a pin for this?
 //  pinMode(8,OUTPUT);     // Servo output pin 2 
 //  pinMode(9,OUTPUT);     // Servo output pin 0
 //  pinMode(10,OUTPUT);    // Servo output pin 1

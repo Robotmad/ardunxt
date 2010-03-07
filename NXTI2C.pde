@@ -1,12 +1,14 @@
+/* ArduNXT - Arduino based Lego Mondstorms NXT universal Remote Control Interface */
+/* Please see http://code.google.com/p/ardunxt/ for further details and the latest version */
 /*************************************************************
  *  Arduino Lego Mindstorms NXT Interface
- *  Written by C M Barnes
- *  October 2009
+ *  Written by Christopher Barnes
+ *  October 2009 ...
  *
  *  Connect NXT Sensor I2C to Arduino:
  *  Arduino analog input 5 - I2C SCL
  *  Arduino analog input 4 - I2C SDA
- *  Both signals require a pull-up resistor (82KOhm) to Vdd.
+ *  Both signals require a pull-up resistor (4K7Ohm) to Vdd.
  *
  *  Notes:
  *  The NXT is the Master and we are the slave IIC device.

@@ -1,5 +1,6 @@
 /* ArduNXT - Arduino based Lego Mondstorms NXT universal Remote Control Interface */
 /* Please see http://code.google.com/p/ardunxt/ for further details and the latest version */
+
 /*************************************************************
  *  Arduino Lego Mindstorms NXT Interface
  *  Written by Christopher Barnes
@@ -35,7 +36,7 @@
  *
  *  This code is generic and can be used to share any data
  *  with the NXT.  As the IIC actions required to behave as a
- *  slave device are triggered by interrupts (handled in twi.c)
+ *  slave device are triggered by interrupts (handled in twi4nxt.c)
  *  this code is very efficient - it wastes no time in loops.
  *
  *  Constant strings for the Device, Manufacturer and version
@@ -45,7 +46,7 @@
 
 /*************************************************************
  *  Todo:
- *  1) Modify wire.c or twi.c to include a timeout so that we 
+ *  1) Modify twi4nxt.c to include a timeout so that we 
  *  can get out of a state where we are left driving SDA low,
  *  probably as a result of having missed a clock pulse.
  *  
@@ -56,7 +57,8 @@
 
 // Make these includes in the main sketch file
 //#include <avr/io.h>
-//#include <Wire.h>										// We need to call functions from the wire library
+//extern void twi4nxt_attachSlaveRxEvent( void (*)(byte*, uint8_t) );
+//extern void twi4nxt_attachSlaveTxEvent( void (*)(void) );
 
 
 //---------------------------------------------------------------------
@@ -122,7 +124,7 @@ static union
 {
 	// The NXT accesses data by register address, which
 	// is used as the offset into this byte array
-	byte		au8Raw[NXT_SHARED_DATA_SIZE];			// The size of this array must be at least as large as the size of the Fields structure below
+	byte	au8Raw[NXT_SHARED_DATA_SIZE];			// The size of this array must be at least as large as the size of the Fields structure below
 
 	// The Arduino code accesses data by variable names
 	// BE CAREFUL If you add or remove fields, or change their width (number of bytes)
@@ -130,7 +132,7 @@ static union
 	// to be modified to keep in sync.
 	struct 
 	{									// Register address (starting at NXT_SHARED_DATA_OFFSET)
-		byte	u8SoftwareVersion;		// 0x40
+		byte    u8SoftwareVersion;		// 0x40
                 byte    u8Command;                      // Simple Commands from NXT
 		byte	u8MuxMode;			// 0x41 MUX/Mode 0,1 or 2
 		byte	u8RawCh1;			// 0x42	Remote Control Input Channel 1
@@ -153,9 +155,9 @@ static union
 //---------------------------------------------------------------------
 // Variable declarations
 //---------------------------------------------------------------------
-static byte			m_u8NXTNumReceived;			// Count of number of bytes received (diagnostics)
-static byte			m_u8NXTNumRequests;			// Count of number of bytes requested (diagnostics)
-static byte			m_u8NXTAddress;				// Register address that the NXT is currently accessing
+static uint8_t			m_u8NXTNumReceived;			// Count of number of bytes received (diagnostics)
+static uint8_t			m_u8NXTNumRequests;			// Count of number of bytes requested (diagnostics)
+static uint8_t			m_u8NXTAddress;				// Register address that the NXT is currently accessing
 static unsigned long    	m_u32NXTLastRequest;            	// Time (in millis) at which the last valid request occured
 static bool			m_bNXTAlive;				// Record of whether we believe that NXT communications are alive
 
@@ -180,10 +182,12 @@ void Init_NXTIIC(void)
 #if defined(NXT_LED_PIN)
 	pinMode(NXT_LED_PIN, OUTPUT);				// LED pin configured as an output
 #endif
-
-	Wire.begin(ARDUNXT_I2C_ADDRESS);			// Initialise "wire" and tell it what slave address we are using
-	Wire.onRequest(NXTOnRequest);				// Register function to be called when NXT requests data 
-	Wire.onReceive(NXTOnReceive);				// Register function to be called we receive data from the NXT 
+                
+        // Code based on TWI4NXT
+        twi4nxt_setAddress(ARDUNXT_I2C_ADDRESS);                // Tell TWI system what slave address we are using
+        twi4nxt_attachSlaveTxEvent(NXTOnRequest);               // Register function to be called when NXT requests data 
+        twi4nxt_attachSlaveRxEvent(NXTOnReceive);        	// Register function to be called we receive data from the NXT 
+        twi4nxt_init();
 
 	// Initialise variables
 	m_u8NXTNumReceived = 0U;
@@ -206,7 +210,7 @@ void NXTOnRequest(void)
 	if (!m_bNXTAlive)
 	{
 		// Connection not yet in use - we should receive an address before any read requests
-		Wire.send(0);							// Dummy error return to avoid causing IIC to stall
+		twi4nxt_transmitConst(&m_NXTInterfaceConstData.au8Raw[7], 1);    // Dummy error return (/0) to avoid causing IIC to stall
 		return;
 	}
 	// Send one or more bytes...
@@ -220,7 +224,7 @@ void NXTOnRequest(void)
 
 		if (u8Offset < NXT_SHARED_CONST_DATA_SIZE)
 		{
-			Wire.send(m_NXTInterfaceConstData.au8Raw[u8Offset]);
+			twi4nxt_transmitConst(&m_NXTInterfaceConstData.au8Raw[u8Offset], 1);
 			
 			// Auto increment to next byte - so that NXT can make multi-byte requests efficiently
 			m_u8NXTAddress++;
@@ -242,7 +246,7 @@ void NXTOnRequest(void)
 
 		if (u8Offset < NXT_SHARED_DATA_SIZE)
 		{
-			Wire.send(m_NXTInterfaceData.au8Raw[u8Offset]);
+			twi4nxt_transmit(&m_NXTInterfaceData.au8Raw[u8Offset], 1);
 			
 			// Auto increment to next byte - so that NXT can make multi-byte requests efficiently
 			m_u8NXTAddress++;
@@ -260,7 +264,7 @@ void NXTOnRequest(void)
 // Callback function for when we receive one or more bytes from NXT
 // All bytes received up to the IIC "stop" signal are received here in one go
 // hence we do not need bData to be static retained across multiple calls.
-void NXTOnReceive(int NumBytesReceived)
+void NXTOnReceive(byte *u8Received, uint8_t NumBytesReceived)
 {
 	bool	bData = false;
 
@@ -276,7 +280,7 @@ void NXTOnReceive(int NumBytesReceived)
 		if (!bData)
 		{
 			// First byte we receive is the register address
-			m_u8NXTAddress = Wire.receive();
+			m_u8NXTAddress = *u8Received++;  // Wire.receive();
 			bData = true;						// Having received the address any further data is being written to us 
 		}
 		else 
@@ -287,7 +291,7 @@ void NXTOnReceive(int NumBytesReceived)
 				// NXT is attempting to write to an address which is below the shared memory area
 			}
 			else
-			{
+	{
 				byte	u8Offset;	
 
 				// Calculate the offset into the shared memory array
@@ -296,7 +300,7 @@ void NXTOnReceive(int NumBytesReceived)
 				// Check that offset is in range
 				if (u8Offset < NXT_SHARED_DATA_SIZE)
 				{
-					m_NXTInterfaceData.au8Raw[u8Offset] = Wire.receive();
+					m_NXTInterfaceData.au8Raw[u8Offset] = *u8Received++;  // Wire.receive();
 					m_u8NXTNumReceived++;			// Increment count of the number of valid data bytes we have received
 					m_u8NXTAddress++;				// Auto increment register address to support multi-byte transfers
 				}
@@ -400,15 +404,15 @@ static void NXTDiagnostics(void)
 {
 	if (m_u8NXTNumReceived)
 	{
-		Serial.print("Received ");
+	    Serial.print("Received ");
 	    Serial.println((int)m_u8NXTNumReceived);
-		m_u8NXTNumReceived = 0;
+	    m_u8NXTNumReceived = 0;
 	}
 	if (m_u8NXTNumRequests)
 	{
-		Serial.print("Requested ");
+	    Serial.print("Requested ");
 	    Serial.println((int)m_u8NXTNumRequests);
-		m_u8NXTNumRequests = 0;
+            m_u8NXTNumRequests = 0;
 	}
 }
 

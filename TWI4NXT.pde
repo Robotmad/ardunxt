@@ -29,12 +29,12 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include <math.h>
-#include <stdlib.h>
-#include <inttypes.h>
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <compat/twi.h>
+//#include <math.h>
+//#include <stdlib.h>
+//#include <inttypes.h>
+//#include <avr/io.h>
+//#include <avr/interrupt.h>
+//#include <util/twi.h>
 
 #ifndef cbi
 #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
@@ -61,21 +61,6 @@
 #define TWI_MTX   2
 #define TWI_SRX   3
 #define TWI_STX   4
-
-/*  
-void twi_init(void);
-void twi_setAddress(uint8_t);
-uint8_t twi_readFrom(uint8_t, uint8_t*, uint8_t);
-uint8_t twi_writeTo(uint8_t, uint8_t*, uint8_t, uint8_t);
-uint8_t twi_transmit(uint8_t*, uint8_t);
-uint8_t twi_transmitConst(const uint8_t*, uint8_t);
-void twi_attachSlaveRxEvent( void (*)(uint8_t*, uint8_t) );
-void twi_attachSlaveTxEvent( void (*)(void) );
-void twi_reply(uint8_t);
-void twi_stop(void);
-void twi_releaseBus(void);
-*/
-
 
 static volatile uint8_t twi_state;
 static uint8_t twi_slarw;
@@ -122,7 +107,7 @@ void twi4nxt_init(void)
   // initialize twi prescaler and bit rate
   cbi(TWSR, TWPS0);
   cbi(TWSR, TWPS1);
-  TWBR = ((CPU_FREQ / TWI_FREQ) - 16) ;//  / 2; temp remove /2 to reduce frequency???
+  TWBR = ((CPU_FREQ / TWI_FREQ) - 16) / 2;
 
   /* twi bit rate formula from atmega128 manual pg 204
   SCL Frequency = CPU Clock Frequency / (16 + (2 * TWBR))
@@ -160,6 +145,7 @@ void twi4nxt_setAddress(uint8_t address)
 void twi4nxt_attachSlaveRxEvent( void (*function)(byte*, uint8_t) )
 {
   twi_onSlaveReceive = function;
+  Serial.println("AttachSlaveRXEvent");
 }
 
 
@@ -172,6 +158,7 @@ void twi4nxt_attachSlaveRxEvent( void (*function)(byte*, uint8_t) )
 void twi4nxt_attachSlaveTxEvent( void (*function)(void) )
 {
   twi_onSlaveTransmit = function;
+  Serial.println("AttachSalveTXEvent");
 }
 
 
@@ -260,7 +247,7 @@ static void twi_reply(uint8_t ack)
   if(ack){
     TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);
   }else{
-	  TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT);
+    TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT);
   }
 }
 
@@ -300,16 +287,16 @@ static void twi_stop(void)
 //  twi_state = TWI_READY;
 //}
 
-SIGNAL(TWI_vect)
+ISR(TWI_vect)
 {
   switch(TW_STATUS){
 //  // All Master
-//  case TW_START:     // sent start condition
-//  case TW_REP_START: // sent repeated start condition
-//    // copy device address and r/w bit to output register and ack
-//    TWDR = twi_slarw;
-//    twi_reply(1);
-//    break;
+  case TW_START:     // sent start condition
+  case TW_REP_START: // sent repeated start condition
+    // copy device address and r/w bit to output register and ack
+    TWDR = twi_slarw;
+    twi_reply(1);
+    break;
 
 //  // Master Transmitter
 //  case TW_MT_SLA_ACK:  // slave receiver acked address

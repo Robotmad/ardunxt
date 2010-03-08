@@ -1,7 +1,7 @@
 /* ArduNXT - Arduino based Lego Mondstorms NXT universal Remote Control Interface */
 /* Please see http://code.google.com/p/ardunxt/ for further details and the latest version */
 /* By Christopher Barnes */
-/* 
+ 
 /*
 // Aspects of this software were derived from code used in ArduPilot
    By Chris Anderson, Jordi Munoz
@@ -15,9 +15,6 @@
   -Peter Meister
   -Remzibi
 */
-
-// WARNING - at present this code requires a modified version of WIRE and TWI 
-// I need to find out how to get this version used by default or replace them with new code.
 
 // Standard Arduino Serial output is unbuffered so be careful about the impact that lots of diagnostics has on performance.
 // You might like to try an alternative version of the HardwareSerial.h and HardwareSerial.cpp, by Kiril available from:
@@ -38,15 +35,17 @@
 // Single status byte for NXT to read to say if anything has changed (bitmap of what?)
 // Double buffer GPS data so that you can read it all without risk of partial update...
 
-#include <Wire.h>
 #include <avr/interrupt.h>
 #include <avr/eeprom.h>
 #include <avr/io.h>
 
+// Fucntion Prototypes for integration with twi4nxt code
+extern void twi4nxt_attachSlaveRxEvent( void (*)(byte*, uint8_t) );
+extern void twi4nxt_attachSlaveTxEvent( void (*)(void) );
+
 #define TITLE_STRING    "ArduNXT Universal RC Interface"
 #define VERSION_STRING  " V1.03"
 #define SERIAL_BAUD     (57600)
-
 
 
 // Some of the code has been migrated from a previous project which uses the following type definitions:

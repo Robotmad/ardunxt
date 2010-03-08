@@ -38,6 +38,7 @@
 #include <avr/interrupt.h>
 #include <avr/eeprom.h>
 #include <avr/io.h>
+#include <util/twi.h>
 
 // Fucntion Prototypes for integration with twi4nxt code
 extern void twi4nxt_attachSlaveRxEvent( void (*)(byte*, uint8_t) );

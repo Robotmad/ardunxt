@@ -65,6 +65,7 @@
 // Constant Definitions
 //---------------------------------------------------------------------
 #define ARDUNXT_I2C_ADDRESS			((uint8_t)(0x02))        	// Our IIC slave address (this is a 7 bit value)
+                                                                                // As the NXT has a port per sensor - 
 //#define NXT_SOFTWARE_VERSION			(0x01)				// Software version byte which can be read by NXT
 #define NXT_SHARED_CONST_DATA_OFFSET            (0x00)				// The address offset of the first read only register
 #define NXT_SHARED_CONST_DATA_SIZE		(0x18)				// The number of bytes allocated to the const memory
@@ -131,7 +132,7 @@ static union
 	// as this will cause the register addresses to move - code in the NXT will need
 	// to be modified to keep in sync.
 	struct 
-	{									// Register address (starting at NXT_SHARED_DATA_OFFSET)
+	{						// Register address (starting at NXT_SHARED_DATA_OFFSET)
 		byte    u8SoftwareVersion;		// 0x40
                 byte    u8Command;                      // Simple Commands from NXT
 		byte	u8MuxMode;			// 0x41 MUX/Mode 0,1 or 2
@@ -280,7 +281,7 @@ void NXTOnReceive(byte *u8Received, uint8_t NumBytesReceived)
 		if (!bData)
 		{
 			// First byte we receive is the register address
-			m_u8NXTAddress = *u8Received++;  // Wire.receive();
+			m_u8NXTAddress = *u8Received++;
 			bData = true;						// Having received the address any further data is being written to us 
 		}
 		else 
@@ -291,7 +292,7 @@ void NXTOnReceive(byte *u8Received, uint8_t NumBytesReceived)
 				// NXT is attempting to write to an address which is below the shared memory area
 			}
 			else
-	{
+	                {
 				byte	u8Offset;	
 
 				// Calculate the offset into the shared memory array

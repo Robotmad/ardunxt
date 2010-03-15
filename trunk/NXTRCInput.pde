@@ -81,7 +81,7 @@ void Init_RCInputCh(void)
   }
 
   m_u16ValidFrames = 0;
-  sei();                                  // Enabling interrupts
+  // NB sei(); is required to enable interrupts
 }
 
 
@@ -244,7 +244,7 @@ static void Init_RCInputPCIISR(void)
   PCMSK0 = _BV(3);    // Only enable interrupt on change for "Pin 11" PB3 
   PCMSK2 = _BV(6);    // Only enable interrupt on change for "Pin 6" PD6
 
-  PCICR = 0x05;     // Enable pin change interrupt for groups 0..7 and 16..23
+  PCICR = 0x05;       // Enable pin change interrupt for groups 0..7 and 16..23
 }
 
 
@@ -429,10 +429,6 @@ void RCInput_Handler(void)
         {
           m_u16ValidFrames++;  // TEMP - this actaully counts each valid pulse as a frame - needs refining
           g_u16Pulse[i] = u16Pulse;
-          //Serial.println((int)u16Pulse);
-
-          // TEMP TESTING - invert signal
-          ServoOutput(i, 3000 - (INT_16)u16Pulse);
         }
         //Serial.print(" ");
       }

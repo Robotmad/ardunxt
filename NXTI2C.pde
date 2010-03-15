@@ -9,7 +9,7 @@
  *  Connect NXT Sensor I2C to Arduino:
  *  Arduino analog input 5 - I2C SCL
  *  Arduino analog input 4 - I2C SDA
- *  Both signals require a pull-up resistor (4K7Ohm) to Vdd.
+ *  Both signals require a pull-up resistor (82KOhm) to Vdd.
  *
  *  Notes:
  *  The NXT is the Master and we are the slave IIC device.
@@ -25,8 +25,8 @@
  *  there is only one sensor connected per NXT IIC Sensor 
  *  interface port. (The address is a 7 bit field, the LSBit
  *  of the addressing byte in IIC is used to indicate read
- *  or write operations, thus for a read the byte is 0x0?
- *  and for write it is 0x0?) 
+ *  or write operations, thus for a read the byte is 0x02
+ *  and for write it is 0x03) 
  *
  *  The NXT reads and writes data from/to memory 
  *  mapped registers, using an 8 bit register address.
@@ -64,7 +64,7 @@
 //---------------------------------------------------------------------
 // Constant Definitions
 //---------------------------------------------------------------------
-#define ARDUNXT_I2C_ADDRESS			((uint8_t)(0x02))        	// Our IIC slave address (this is a 7 bit value)
+#define ARDUNXT_I2C_ADDRESS			((uint8_t)(0x01))        	// Our IIC slave address (this is a 7 bit value)
                                                                                 // As the NXT has a port per sensor - 
 //#define NXT_SOFTWARE_VERSION			(0x01)				// Software version byte which can be read by NXT
 #define NXT_SHARED_CONST_DATA_OFFSET            (0x00)				// The address offset of the first read only register
@@ -72,9 +72,9 @@
 #define NXT_SHARED_DATA_OFFSET			(0x40)				// The address offset of the first read/write register
 #define NXT_SHARED_DATA_SIZE			(0x20)				// The number of bytes allocated to the shared memory (See below)
 #define NXT_TRANSACTION_TIMEOUT			(100U)				// number of milliseconds since last valid data transfer before we timeout connection
-#define NXT_VERSION				'V','1','.','0','0','/0','/0','/0'			// Version string - must be 8 characters
-#define NXT_MANUFACTURER			'D','I','Y','D','r','o','n','e'				// Manufacturer string - must be 8 characters
-#define NXT_DEVICE_NAME				'R','C','i','/','f','/0','/0','/0'			// Device Name string - must be 8 characters
+#define NXT_VERSION				'V','1','.','0','0',0,0,0	// Version string - must be 8 characters
+#define NXT_MANUFACTURER			'D','I','Y','D','r','o','n','e'	// Manufacturer string - must be 8 characters
+#define NXT_DEVICE_NAME				'R','C','i','/','f',0,0,0	// Device Name string - must be 8 characters
 
 // If you want an LED to indicate the state of the NXT connection define which pin it is on here
 // obviously you will need to be careful not to make use of this pin elsewhere in your code.
@@ -134,20 +134,20 @@ static union
 	struct 
 	{						// Register address (starting at NXT_SHARED_DATA_OFFSET)
 		byte    u8SoftwareVersion;		// 0x40
-                byte    u8Command;                      // Simple Commands from NXT
-		byte	u8MuxMode;			// 0x41 MUX/Mode 0,1 or 2
-		byte	u8RawCh1;			// 0x42	Remote Control Input Channel 1
-		byte	u8RawCh2;        		// 0x43 Remote Control Input Channel 2
-                byte    u8RawCh3;                       // 0x44 n/a
-                byte    u8RawCh4;                       // 0x45 n/a
-                INT_8   i8Ch1;                          // Signed Remote Control Input Channel 1
-                INT_8   i8Ch2;                          // Signed Remote Control Input Channel 2
-                INT_8   i8Ch3;                          // Signed Remote Control Input Channel 3
-                INT_8   i8Ch4;                          // Signed Remote Control Input Channel 4
-		byte	u8Servo0;			// 0x52 PWM Servo Output
-		byte	u8Servo1;			// 0x53 PWM Servo Output
-		byte	u8Servo2;			// 0x54 PWM Servo Output
-                byte    u8Servo3;
+                byte    u8Command;                      // 0x41 Simple Commands from NXT
+		byte	u8MuxMode;			// 0x42 MUX/Mode 0,1 or 2
+		byte	u8RawCh1;			// 0x43	Remote Control Input Channel 1
+		byte	u8RawCh2;        		// 0x44 Remote Control Input Channel 2
+                byte    u8RawCh3;                       // 0x45 n/a
+                byte    u8RawCh4;                       // 0x46 n/a
+                INT_8   i8Ch1;                          // 0x47 Signed Remote Control Input Channel 1
+                INT_8   i8Ch2;                          // 0x48 Signed Remote Control Input Channel 2
+                INT_8   i8Ch3;                          // 0x49 Signed Remote Control Input Channel 3
+                INT_8   i8Ch4;                          // 0x4A Signed Remote Control Input Channel 4
+		byte	u8Servo0;			// 0x4B PWM Servo Output
+		byte	u8Servo1;			// 0x4C PWM Servo Output
+		byte	u8Servo2;			// 0x4D PWM Servo Output
+                byte    u8Servo3;                       // 0x4E PWM Servo Output 
                 GPSRecord  GPS;
 	} Fields;
 } m_NXTInterfaceData;
@@ -161,10 +161,11 @@ static uint8_t			m_u8NXTNumRequests;			// Count of number of bytes requested (di
 static uint8_t			m_u8NXTAddress;				// Register address that the NXT is currently accessing
 static unsigned long    	m_u32NXTLastRequest;            	// Time (in millis) at which the last valid request occured
 static bool			m_bNXTAlive;				// Record of whether we believe that NXT communications are alive
+static bool                     m_bNXTActivity;                         // Flag that there has been interrupt handled data transfer activity
 
 // A few sanity checks
 #if (255 < (NXT_SHARED_DATA_OFFSET + NXT_SHARED_DATA_SIZE))
-#error 'NXT Code only only supports single byte for address'
+#error 'NXT Code only supports single byte for address'
 #endif
 
 //---------------------------------------------------------------------
@@ -196,7 +197,8 @@ void Init_NXTIIC(void)
 	m_u8NXTAddress = 0U;
 	m_u32NXTLastRequest = 0U;
 	m_bNXTAlive = false;
-
+        m_bNXTActivity = false;
+        
 	// Initialise NXT shared data to 0
 	for (i = 0; i < NXT_SHARED_DATA_SIZE; i++)
 	{
@@ -226,9 +228,6 @@ void NXTOnRequest(void)
 		if (u8Offset < NXT_SHARED_CONST_DATA_SIZE)
 		{
 			twi4nxt_transmitConst(&m_NXTInterfaceConstData.au8Raw[u8Offset], 1);
-			
-			// Auto increment to next byte - so that NXT can make multi-byte requests efficiently
-			m_u8NXTAddress++;
 		}
 		else
 		{
@@ -257,9 +256,10 @@ void NXTOnRequest(void)
 			// Out of range register address requested
 		}
 	}
-	m_u32NXTLastRequest = millis();
+        m_bNXTActivity = true;
 	m_u8NXTNumRequests++;						// Increment count of the number of valid bytes requested from us
 }
+
 
 
 // Callback function for when we receive one or more bytes from NXT
@@ -274,6 +274,7 @@ void NXTOnReceive(byte *u8Received, uint8_t NumBytesReceived)
 		// Connection not yet in use - it is now
                 // don't call digitalWrite to turn LED on here as it is verbose and we are in an interrupt routine
 		m_bNXTAlive = true;						// Remember that it is now working
+                m_bNXTActivity = true;
 	}
 
 	while (NumBytesReceived--)
@@ -311,7 +312,7 @@ void NXTOnReceive(byte *u8Received, uint8_t NumBytesReceived)
 					// Do not increment register address in this case to avoid it wrapping back round
 					// and appearing to be back in a valid range
 				}
-				m_u32NXTLastRequest = millis();
+                                m_bNXTActivity = true;
 			}
 		}
 	}
@@ -326,11 +327,22 @@ void NXT_Handler(void)
  		NXT_LED(HIGH);				// Switch NXT status LED On
 	
 		// Check if the connection is still alive
-		if ((millis() - m_u32NXTLastRequest) > NXT_TRANSACTION_TIMEOUT)
+                if (m_bNXTActivity)
+                {
+                        // remember time of latest activity
+			m_u32NXTLastRequest = millis();
+                        m_bNXTActivity = false;
+                }
+                else if ((millis() - m_u32NXTLastRequest) > NXT_TRANSACTION_TIMEOUT)
 		{
-			// Timeout
+			// No activity Timeout
 			NXT_LED(LOW);			// Switch NXT status LED Off
-			m_bNXTAlive = false;
+                        if (bit_is_clear(PINC, 5))      // Check for SCL stuck low
+                        {  
+                          Serial.println("***** Release I2C Bus *****");
+                          twi4nxt_releaseBus();         // release Bus
+			}
+                        m_bNXTAlive = false;
 			m_u8NXTAddress = 0;		// Reset register address
 		}
 
@@ -356,12 +368,12 @@ void NXT_Handler(void)
 			// Values in Fields can be used directly by other code, or we can take notice of them regularly here.
 			// Examples
 			// ========
-			pulse_servo_0(m_NXTInterfaceData.Fields.u8Servo0);
-			pulse_servo_1(m_NXTInterfaceData.Fields.u8Servo1);
-			pulse_servo_2(m_NXTInterfaceData.Fields.u8Servo2);
-			pulse_servo_3(m_NXTInterfaceData.Fields.u8Servo3);
-			
-                        m_u8NXTNumReceived = 0;
+			ServoOutput_u8(0, m_NXTInterfaceData.Fields.u8Servo0);
+			ServoOutput_u8(1, m_NXTInterfaceData.Fields.u8Servo1);
+			ServoOutput_u8(2, m_NXTInterfaceData.Fields.u8Servo2);
+			ServoOutput_u8(3, m_NXTInterfaceData.Fields.u8Servo3);
+                        	
+//                      m_u8NXTNumReceived = 0;
 		}
 
 		// Values in Fields (to be read by tbhe NXT) could be written to directly by applicable code throught the system,
@@ -369,7 +381,7 @@ void NXT_Handler(void)
 		NXTUpdateValues();
 	}
 
-//	NXTDiagnostics();	// If you want to enable this remove teh m_u8NXTNumReceived = 0; line above
+	NXTDiagnostics();	// If you want to enable this remove teh m_u8NXTNumReceived = 0; line above
 }
 
 
@@ -380,17 +392,17 @@ static void NXTUpdateValues(void)
   // ========
   m_NXTInterfaceData.Fields.u8MuxMode = Multiplexer_State();
   
-  if (TRUE)
+//  if (TRUE)
   {
     // RCInput values (may) have been updated
     m_NXTInterfaceData.Fields.i8Ch1     = RCInput_Ch(0) / 4;	// 8 bit version of Signed PWM input
-    m_NXTInterfaceData.Fields.u8RawCh1  = RCInput_Ch(0) >> 3;   // 8 bit version of Raw (unsigned) PWM input
+    m_NXTInterfaceData.Fields.u8RawCh1  = RCInput_RawCh(0) >> 3;   // 8 bit version of Raw (unsigned) PWM input
     m_NXTInterfaceData.Fields.i8Ch2     = RCInput_Ch(1) / 4;	// 8 bit version of Signed PWM input
-    m_NXTInterfaceData.Fields.u8RawCh2  = RCInput_Ch(1) >> 3;   // 8 bit version of Raw (unsigned) pWM input
+    m_NXTInterfaceData.Fields.u8RawCh2  = RCInput_RawCh(1) >> 3;   // 8 bit version of Raw (unsigned) pWM input
     m_NXTInterfaceData.Fields.i8Ch3     = RCInput_Ch(2) / 4;	// 8 bit version of Signed PWM input
-    m_NXTInterfaceData.Fields.u8RawCh3  = RCInput_Ch(2) >> 3;   // 8 bit version of Raw (unsigned) PWM input
+    m_NXTInterfaceData.Fields.u8RawCh3  = RCInput_RawCh(2) >> 3;   // 8 bit version of Raw (unsigned) PWM input
     m_NXTInterfaceData.Fields.i8Ch4     = RCInput_Ch(3) / 4;	// 8 bit version of Signed PWM input
-    m_NXTInterfaceData.Fields.u8RawCh4  = RCInput_Ch(3) >> 3;   // 8 bit version of Raw (unsigned) PWM input
+    m_NXTInterfaceData.Fields.u8RawCh4  = RCInput_RawCh(3) >> 3;   // 8 bit version of Raw (unsigned) PWM input
   }
   
   if (g_GPSMsgFlags.bUpdate)

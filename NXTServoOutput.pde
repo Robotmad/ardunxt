@@ -8,6 +8,7 @@
 #define PWM_PERIOD		(40000U)        // PWM Output period TODO - formula to convert from uS or mS to ticks
 
 #define MIN_PULSE_WIDTH         (1000U)  // uS
+#define DFLT_PULSE_WIDTH        (1500U)  // uS
 #define MAX_PULSE_WIDTH         (2000U)  // uS    
 
 #define NUM_SERVO_CH            (4U)      // total number of servo output channels
@@ -84,7 +85,7 @@ void Init_ServoOutput(void)
 #endif
 #endif
 
-  // NB sei(), to enable interrupts, is in Init_RCInputCh()
+  // NB sei() is required to enable interrupts.
 }
 
 /*************************************************************************
@@ -125,40 +126,58 @@ ISR(TIMER1_CAPT_vect)//This is a timer 1 interrupt, executed every 20mS
 #if (3 < NUM_PWMI)
   g_RCIFlags[3].bTimerWrap = TRUE;
 #endif  
+  // reti();  // taken care of by the compiler for us
 }
 
 /*************************************************************************
  * 
  *************************************************************************/
 #if (NUM_HW_SERVO_CH < NUM_SERVO_CH)
-ISR(TIMER2_COMPA_vect, ISR_NAKED) //Interrupt of timer 2 compare A
-{
+ISR(TIMER2_COMPA_vect) // , ISR_NAKED) //Interrupt of timer 2 compare A
+{ 
   // Timer2 compare A = End Servo PWM ouput pulse
   // No need to save SREG as the only instruction we want to use ("sbi") does not modify it.
   SERVO_2_LOW;
-  reti();            // We must provide the return from interrupt because of using ISR_NAKED
+//  reti();            // We must provide the return from interrupt because of using ISR_NAKED
 }
 #endif
 
 #if ((NUM_HW_SERVO_CH + 1) < NUM_SERVO_CH)
-ISR(TIMER2_COMPB_vect, ISR_NAKED) //Interrupt of timer 2 compare B  (try ISR_NAKED?)
+ISR(TIMER2_COMPB_vect) //, ISR_NAKED) //Interrupt of timer 2 compare B  (try ISR_NAKED?)
 {
   // Timer2 compare B = End Servo PWM output pulse
   // No need to save SREG as the only instruction we want to use ("sbi") does not modify it.
   SERVO_3_LOW;
-  reti();            // We must provide the return from interrupt because of using ISR_NAKED
+//  reti();            // We must provide the return from interrupt because of using ISR_NAKED
 }
 
 
 // As we allow Timer 2 to run to TOP (so that if OCR2B is higher than OCR2A we do not reset the timer when it reaches OCR2A) 
 // Thus we need to stop it running (and hence generating more compare match interrupts
-ISR(TIMER2_OVF_vect, ISR_NAKED)
+ISR(TIMER2_OVF_vect)  //, ISR_NAKED)
 {
   TCCR2B = 0;        // Stop timer running until we need to time the next pulse  
-  reti();            // As long as the line above compiles to a load instruction it will not affect SREG and we can use ISR_NAKED  
+//  reti();            // As long as the line above compiles to a load instruction it will not affect SREG and we can use ISR_NAKED  
 }
 #endif
 
+
+
+// Control PWM Servo pulse width from an unsigned 8 bit value
+// Value range: 1-255 scaled to pulse width in uS using an LSBit size of 4uS 
+// Centred on a value of 128 = 1500uS
+// 0 = Off
+void ServoOutput_u8(byte u8Ch, byte u8PulseWidth)
+{
+  if (u8PulseWidth)
+  {
+    ServoOutput(u8Ch, (1500 - (128 << 2)) + ((unsigned int)u8PulseWidth << 2));
+  }
+  else
+  {
+    ServoOutput(u8Ch, 0U);  // Off
+  }
+}
 
 
 void ServoOutput(byte u8Ch, unsigned int u16PulseWidth)
@@ -203,6 +222,7 @@ void pulse_servo_0(unsigned int u16PulseWidth)
   {
     // Off
     OCR1A = 0;  // 0 would still give a very short pulse
+    // TODO as per notes below improve on this
   }
 }
 
@@ -239,7 +259,8 @@ void pulse_servo_1(unsigned int u16PulseWidth)
   else
   {
     // Off
-    OCR1B = PWM_PERIOD;  // I think this will give no pulse but a permanently high output!
+    OCR1B = PWM_PERIOD;  // gives no pulse but a permanently high output!
+    // TODO as per notes above improve on this
   }
 }
 

@@ -45,7 +45,7 @@ extern void twi4nxt_attachSlaveRxEvent( void (*)(byte*, uint8_t) );
 extern void twi4nxt_attachSlaveTxEvent( void (*)(void) );
 
 #define TITLE_STRING    "ArduNXT Universal RC Interface"
-#define VERSION_STRING  " V1.03"
+#define VERSION_STRING  " V1.06"
 #define SERIAL_BAUD     (57600)
 
 
@@ -146,13 +146,13 @@ void loop()                        //Main Loop
   // Each "Handler" is designed to do a small amount of processing each time it is called in
   // a co-operative approach to multi-tasking.
   RCInput_Handler();
-//Analogue_Handler();
-  GPS_Handler();
+//  Analogue_Handler();
+//  GPS_Handler();
   NXT_Handler();
-  Multiplexer_Handler();
+//  Multiplexer_Handler();
   
   // Support for development diagnostics and debugging information output
-  if (g_DiagnosticsFlags.bDigitalInput) DigitalInput_Monitor();
+//  if (g_DiagnosticsFlags.bDigitalInput) DigitalInput_Monitor();
   if (g_DiagnosticsFlags.bPerformance)  Diagnostics_Handler();
 }
 
@@ -199,7 +199,9 @@ void Init_NXTUniversalRCInterface(void)
   Init_RCInputCh();
   Init_ServoOutput();
   Init_NXTIIC();
-  Init_GPS();
+//  Init_GPS();
+  // Everything initialised - enable interrupts
+  sei();
 }
 
 /*****************************************************************************

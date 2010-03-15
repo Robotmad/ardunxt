@@ -14,7 +14,7 @@
 #define MUX_RADIO_CONTROL       (0)          // Low signal to/from multiplexer for Radio Control of Servo Output
 
 
-#define DFLT_MUX_CONTROL        (MUX_RADIO_CONTROL)   // How should we start up multiplexer
+#define DFLT_MUX_CONTROL        (MUX_ATMEGA_CONTROL)  // How should we start up multiplexer
 #define FAILSAFE_MUX_CTRL       (MUX_ATMEGA_CONTROL)  // How to set multiplexer in failsafe mode
 
 // RC Input Channel and threshold for switching
@@ -37,6 +37,7 @@ UINT_32                          m_u32LastChangeTime;
 
 void Init_Multiplexer(void)
 {
+  Serial.println("Init_Multiplexer");
 #ifdef _ARDUPILOT_HW  
   // On Prototype hardware (using Ardupilot) Mux is an input
   pinMode(MULTIPLEXER_CTRL_PIN, INPUT);      // MUX input pin from ATTiny

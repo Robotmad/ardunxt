@@ -5,11 +5,16 @@
 // Update Frequency is 50Hz (20mS period) standard for normal servos
 // Channels 2 & 3 can be disabled by requesting a pulse width of 0 (further work required to implement this in channels 0 & 1)
 
+//TODO:
+// Speed control
+// 0=deactivated for channels 0 and 1.
+// 
+
 #define PWM_PERIOD		(40000U)        // PWM Output period TODO - formula to convert from uS or mS to ticks
 
-#define MIN_PULSE_WIDTH         (1000U)  // uS
+#define MIN_PULSE_WIDTH         (500U)  // uS
 #define DFLT_PULSE_WIDTH        (1500U)  // uS
-#define MAX_PULSE_WIDTH         (2000U)  // uS    
+#define MAX_PULSE_WIDTH         (2500U)  // uS    
 
 #define NUM_SERVO_CH            (4U)      // total number of servo output channels
 #define NUM_HW_SERVO_CH         (2U)      // 2 hardware servo output channels
@@ -126,6 +131,19 @@ ISR(TIMER1_CAPT_vect)//This is a timer 1 interrupt, executed every 20mS
 #if (3 < NUM_PWMI)
   g_RCIFlags[3].bTimerWrap = TRUE;
 #endif  
+
+  // Code to support Clean disabling of PWM output & Servo speed of change control
+  if (g_MiscFlags.bFrameUpdate)
+  {
+    // Frame Update flag is still set...
+    // Foreground processing has failed to handle this in time.
+    g_MiscFlags.bFrameMissed = TRUE;
+  }
+  else
+  {
+   g_MiscFlags.bFrameUpdate = TRUE;
+  }
+  
   // reti();  // taken care of by the compiler for us
 }
 
@@ -180,6 +198,7 @@ void ServoOutput_u8(byte u8Ch, byte u8PulseWidth)
 }
 
 
+// Set Servo Pulse Width for a specified Channel in uS
 void ServoOutput(byte u8Ch, unsigned int u16PulseWidth)
 {
   switch (u8Ch)
@@ -210,7 +229,7 @@ void pulse_servo_0(unsigned int u16PulseWidth)
   if (u16PulseWidth)
   {
     u16PulseWidth = constrain(u16PulseWidth, MIN_PULSE_WIDTH, MAX_PULSE_WIDTH);
-    OCR1A = u16PulseWidth << 1;
+    OCR1A = u16PulseWidth << 1;           // i.e. x 2 as resolution of Timer1 is 0.5uS
  
     if (g_DiagnosticsFlags.bServoOutput)
     {
@@ -248,7 +267,7 @@ void pulse_servo_1(unsigned int u16PulseWidth)
   if (u16PulseWidth)
   {
     u16PulseWidth = constrain(u16PulseWidth, MIN_PULSE_WIDTH, MAX_PULSE_WIDTH);
-    OCR1B = u16PulseWidth << 1;
+    OCR1B = u16PulseWidth << 1;           // i.e. x 2 as resolution of Timer1 is 0.5uS
 
     if (g_DiagnosticsFlags.bServoOutput)
     {
@@ -308,5 +327,41 @@ void pulse_servo_3(unsigned int u16PulseWidth)
 }
 
 
+/****************************************************************
+*
+****************************************************************/
+void ServoOutput_Handler(void)
+{
+  if (g_MiscFlags.bFrameUpdate)
+  {
+    // Only called once per frame, just after the previous values have been used
+    g_MiscFlags.bFrameUpdate = FALSE;
+ 
+    // Update Servo Positions as controlled by NXT, taking account of speed etc...
+    NXTOnServoUpdate();
+
+    if (g_MiscFlags.bFrameMissed)
+    {
+      // Foreground processing has failed to handle this in time.
+      Serial.println("Servo:Missed Frame Update");
+      g_MiscFlags.bFrameMissed = FALSE;
+    }
+  }
+  else
+  {  
+    // Check to see if Channel 0 or 1 need to be disabled
+/*
+    if (OUTPUT IS LOW)
+    {
+        
+    }
+    if ()
+    {
+    
+    }
+*/    
+  }
+}
 
 
+  

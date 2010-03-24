@@ -1,7 +1,26 @@
-//#if GPS_PROTOCOL == 2
 /****************************************************************
 * Here you have all the parsing stuff for uBlox
 ****************************************************************/
+
+//
+// If you want an LED to indicate the state of the GPS define which pin it is on here
+// obviously you will need to be careful not to make use of this pin elsewhere in your code.
+// If you don't want an GPS status LED then do not define GPS_LED_PIN
+#define GPS_LED_PIN              		(12)
+
+// Define the maximum allowed time between receiving valid fixes for the LED to remain on
+#define GPS_LED_TIMEOUT                         (1100)  // milli seconds (appropriate for 1Hz GPS)
+
+//---------------------------------------------------------------------
+// Macro Definitions
+//---------------------------------------------------------------------
+#if defined(GPS_LED_PIN)
+#define GPS_LED(state)	digitalWrite(GPS_LED_PIN, state)
+#else
+#define GPS_LED(state)	{}
+#endif
+
+
 
 //You have to disable all the other string, only leave this ones:
 //NAV - POSLLH Geodetic Position Solution, PAGE 66 of datasheet
@@ -56,6 +75,11 @@ void Init_GPS(void)
   g_u8GPSWriteIndex0 = 0U;
   GPS_timer = 0U;
   g_GPSMsgFlags.u8Value = 0U;
+
+  // Initialise NXT status LED output pin
+#if defined(GPS_LED_PIN)
+  pinMode(GPS_LED_PIN, OUTPUT);				// LED pin configured as an output
+#endif
 }
 
 /****************************************************************
@@ -203,9 +227,9 @@ void GPS_Handler(void)
   // Check for timeout
   if (g_GPSMsgFlags.bValid)
   {
-    if(millis() - GPS_timer > 1100)
+    if(millis() - GPS_timer > GPS_LED_TIMEOUT)
     {
-      digitalWrite(12, LOW); //If we don't receive any byte in two seconds turn off gps fix LED...
+      GPS_LED(LOW);				// If we don't receive any valid fixses in defined time turn off gps fix LED...
     
       // Discard any partially received data  
       g_GPSMsgFlags.bValid = FALSE;
@@ -270,7 +294,7 @@ void UBX_Decode(void)
     
     if (g_DiagnosticsFlags.bGPS) GPS_Diagnostics();
     GPS_timer = millis();    // Remember time of fix (for timeout)   
-    digitalWrite(12, HIGH);  // Turn LED On when gps is fixed.  
+    GPS_LED(HIGH);           // Turn LED On when valid GPS fix is received.  
   }
 }
 
@@ -438,7 +462,7 @@ void GPSByte(void)
 
 void NMEA_Decode(void)
 {
-  
+  // TODO - import decoding from other projects  
 }
 
 void GPS_Diagnostics(void)

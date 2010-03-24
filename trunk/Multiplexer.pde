@@ -38,7 +38,7 @@ UINT_32                          m_u32LastChangeTime;
 void Init_Multiplexer(void)
 {
   Serial.println("Init_Multiplexer");
-#ifdef _ARDUPILOT_HW  
+#ifdef _ATTINY_IN_USE  
   // On Prototype hardware (using Ardupilot) Mux is an input
   pinMode(MULTIPLEXER_CTRL_PIN, INPUT);      // MUX input pin from ATTiny
   m_u8CurrentMode = digitalRead(MULTIPLEXER_CTRL_PIN);
@@ -52,6 +52,7 @@ void Init_Multiplexer(void)
 }
 
 
+// Return the current state of the Multiplexer
 byte Multiplexer_State(void)
 {
   return(m_u8CurrentMode);
@@ -64,7 +65,7 @@ void Multiplexer_Handler(void)
   
   byte u8Mode;
   
-#ifdef _ARDUPILOT_HW
+#ifdef _ATTINY_IN_USE
 // Digital Inputs
 // MUX: 
 //   L = 0 Failsafe, RC control of Servo outputs

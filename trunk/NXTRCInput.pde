@@ -1,7 +1,7 @@
 // TODO 
 // high level logic to check that we get a pulse for all expected channels
 // to allow detection of which channels are active
-// timeout
+// timeout (so that when pulses stop we clar bValid flags)
 // failsafe
 
 #define MAX_PULSE_WIDTH		(2200)					// uS Maximum pulse width considered as valid
@@ -9,37 +9,47 @@
 #define DFLT_PWMI_CENTRE        (1500)                                  // uS Default center pulse width
 #define PWM_PERIOD		(40000)                                 // PWM Output period (MUST be in sync with value used to set up T1)
 
-#define NUM_PWMI	        (4)                                     // Number of RCINput (Pulse Width Measurement) Channels 
+//#define NUM_PWMI	        (4)                                     // Number of RCINput (Pulse Width Measurement) Channels 
 
 // We have no choice of which pins are used for input channels 0 & 1 they must be PD2, PD3 (Arduino Digital inputs 2 and 3)
 // We do however have some choice over the extra channels - but please be careful as they must be on different ports
 #define RCINPUT_CH2_PIN         (6)                                     // RCInput pin on Port D
 #define RCINPUT_CH3_PIN         (11)                                    // RCInput pin on Port B
 
+// Flags for Remote Control PWM Input Channels
+/* Moved to main file to make it available globally
 typedef union {
   struct {
+    // High level
+    unsigned bValid:1;       // Flag to indicate that the channel is being received
+    unsigned bUpdate:1;      // Flag to indicate that data has been updated  
+
+    // Low level
     unsigned bRise:1;        // We have recorded a timestamp for rising edge
     unsigned bFall:1;        // We have recorded a timestamp for a falling edge
-    unsigned bLost:1;        // We have lost a pulse measurement as the handler was not called frequently enough
+    unsigned bLost:1;        // We have lost a pulse measurements as the handler was not called frequently enough
     unsigned bTimerWrap:1;
-    unsigned bWrap:1;        // Need to add PWM_PERIOD to fall time
+    unsigned bWrap:1;        // Need to add PWM_PERIOD to fall time  
   };
   struct {
     UINT_8 u8Value;
   };
 } 
-RCINPUT_FLAGS;
+RCInputFlags;
+*/
+#define HIGH_LEVEL_FLAG_MASK  (0x03)
 
 
 /*************************************************************************
  * 
  *************************************************************************/
-volatile RCINPUT_FLAGS                                   g_RCIFlags[NUM_PWMI];
+//volatile RCInputflags                                  g_RCIFlags[NUM_PWMI];
 volatile unsigned int					 g_u16PRise[NUM_PWMI];
 volatile unsigned int					 g_u16PFall[NUM_PWMI];
 unsigned int						 g_u16Pulse[NUM_PWMI];
 unsigned int                                             g_u16Centre[NUM_PWMI]; 
 unsigned int                                             m_u16ValidFrames; 
+
 
 /**************************************************************
  * Configuring the RC Input channels  
@@ -50,7 +60,7 @@ void Init_RCInputCh(void)
 {   
   Serial.println("Init_RCInput");
 
-  // First two RCInput channels (0 & 1) have hardware interrupt support
+  // First two RCInput channels (0 & 1) have hardware interrupt support (INT0 and INT1)
   pinMode(2, INPUT);      // RC Input pin 0
   pinMode(3, INPUT);      // RC Input pin 1
 
@@ -356,7 +366,7 @@ void RCInput_Handler(void)
     {
       // I want to make the code while interrupts are disabled as quick as possible - so trying to get the 
       // compiler to do some of the address manipulation here first.  
-      volatile RCINPUT_FLAGS  *pRCIFlags = &g_RCIFlags[i];
+      volatile RCInputFlags  *pRCIFlags = &g_RCIFlags[i];
 
       //Serial.print((int)i);
       //Serial.print(":");
@@ -369,13 +379,19 @@ void RCInput_Handler(void)
       if (pRCIFlags->bWrap)
       {
         // Timer1 wraped around during the pulse measurement - compensate result
+        // This is normal behaviour as the timer we are using is not in sync with the received frames
         //Serial.print("+");
         u16PFall += PWM_PERIOD;  // Can't overflow 16 bits for valid pulse widths
       }
       if (pRCIFlags->bLost)
       {
+        // We have received more than one pulse since we last computed the pulse width from the rise and fall times
+        // The current (most recent) pulse record is still valid and can be used OK
+        // if this happens a lot then the this handler is not being called frequently enough
         Serial.print((int)i);
         Serial.println(" ***LostPulse***");
+//      m_u16LostPulses++;
+        pRCIFlags->bLost = FALSE;
       }
 
       // It is just possible that while we copied the timestamps we started to measure a new pulse
@@ -393,7 +409,9 @@ void RCInput_Handler(void)
       }
       else
       {
-        pRCIFlags->u8Value = 0U;    // Clear flags to indicate that rise and fall times have been recorded
+        // Clear all low level flags to start a new measurement (i.e. just leave the high level flags as set)
+        pRCIFlags->u8Value &= HIGH_LEVEL_FLAG_MASK;
+
         sei();  // re-enable interrupts
 
         // A pair of rise and fall time measurements have been made
@@ -416,6 +434,7 @@ void RCInput_Handler(void)
           Serial.print((int)i);
           Serial.print(" t<");
           Serial.println(MIN_PULSE_WIDTH);
+          g_RCIFlags[i].bValid = FALSE;
         }
         else if (u16Pulse > MAX_PULSE_WIDTH)
         {
@@ -424,11 +443,14 @@ void RCInput_Handler(void)
           Serial.print((int)i);
           Serial.print(" t>");
           Serial.println(MAX_PULSE_WIDTH);
+          g_RCIFlags[i].bValid = FALSE;          
         }	
         else
         {
           m_u16ValidFrames++;  // TEMP - this actaully counts each valid pulse as a frame - needs refining
           g_u16Pulse[i] = u16Pulse;
+          g_RCIFlags[i].bValid = TRUE;
+          g_RCIFlags[i].bUpdate = TRUE;           
         }
         //Serial.print(" ");
       }

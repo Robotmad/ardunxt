@@ -45,9 +45,14 @@ extern void twi4nxt_attachSlaveRxEvent( void (*)(byte*, uint8_t) );
 extern void twi4nxt_attachSlaveTxEvent( void (*)(void) );
 
 #define TITLE_STRING    "ArduNXT Universal RC Interface"
-#define VERSION_STRING  " V1.06"
-#define SERIAL_BAUD     (57600)
+#define VERSION_STRING  "V1.06"            // This is NOT the same as the version reported over the NXT interface 
+                                           // which is defined in NXTI2C.pde
+#define SERIAL_BAUD     (57600)            // Baud Rate used for GPS and Diagnostics
 
+#define NUM_PWMI	(4)                // Number of RCINput (Pulse Width Measurement) Channels 
+
+//#define ATTINY_IN_USE                    // If you do not hold the ATTiny, on the ArduPilot hardware, in reset then it is in control of the multiplexer
+#define MINDSENSORS_NXT_SERVO_COMPATIBLE   // If you want FULL compatibility with Mindsensors NXT Servo Sensor (I2C address and Servo Position Readback)
 
 // Some of the code has been migrated from a previous project which uses the following type definitions:
 typedef signed char   INT_8;
@@ -84,6 +89,18 @@ typedef union {
 } DiagnosticsFlags;
 
 
+// Assorted Flags 
+typedef union {
+  struct {
+    unsigned bFrameUpdate:1;              // PWM Servo Output Frame Update
+    unsigned bFrameMissed:1;              // PWM Servo Output Frame has been missed - check Diagnostics for loop execution performance...
+  };
+  struct {
+    UINT_8 u8Value;
+  };
+} MiscFlags;
+
+
 // Flags to indicate which aspects of the GPS data have been received
 typedef union {
   struct {
@@ -99,6 +116,7 @@ typedef union {
     UINT_8 u8Value;
   };
 } GPSMsgFlags;
+
 
 // Definition of a GPS Record
 typedef struct
@@ -116,6 +134,30 @@ typedef struct
 } GPSRecord;
 
 
+// Flags for Remote Control PWM Input Channels
+typedef union {
+  struct {
+    // High level
+    unsigned bValid:1;       // Flag to indicate that the channel is being received
+    unsigned bUpdate:1;      // Flag to indicate that data has been updated  
+
+    // Low level
+    unsigned bRise:1;        // We have recorded a timestamp for rising edge
+    unsigned bFall:1;        // We have recorded a timestamp for a falling edge
+    unsigned bLost:1;        // We have lost a pulse measurements as the handler was not called frequently enough
+    unsigned bTimerWrap:1;
+    unsigned bWrap:1;        // Need to add PWM_PERIOD to fall time  
+  };
+  struct {
+    UINT_8 u8Value;
+  };
+} 
+RCInputFlags;
+
+
+/*************************************************************************
+ * 
+ *************************************************************************/
 
 // Where things are stored in EEPROM
 #define EE_DIAGNOSTICS_FLAGS    (0x01)
@@ -127,44 +169,47 @@ typedef struct
  **************************************************************************/
 GPSRecord	        		 m_GPSNew;
 GPSMsgFlags	        		 g_GPSMsgFlags;
+volatile RCInputFlags                    g_RCIFlags[NUM_PWMI];
 DiagnosticsFlags                         g_DiagnosticsFlags;
-
-
+volatile MiscFlags                       g_MiscFlags;  
+    
 /***************************************************************************
 
  **************************************************************************/
 void setup()
 {
-  Init_NXTUniversalRCInterface();  // Initialize application...
+  Init_ArduNXT();                  // Initialize application...
   Init_Diagnostics();              // Initialise diagnostics output
 }
 
 
 // Main loop executed as fast as possible
-void loop()                        //Main Loop
+void loop()
 {
   // Each "Handler" is designed to do a small amount of processing each time it is called in
   // a co-operative approach to multi-tasking.
+  ServoOutput_Handler();
   RCInput_Handler();
-//  Analogue_Handler();
-//  GPS_Handler();
+  Analogue_Handler();
+  GPS_Handler();
   NXT_Handler();
-//  Multiplexer_Handler();
+  Multiplexer_Handler();
   
   // Support for development diagnostics and debugging information output
-//  if (g_DiagnosticsFlags.bDigitalInput) DigitalInput_Monitor();
+  if (g_DiagnosticsFlags.bDigitalInput) DigitalInput_Monitor();
   if (g_DiagnosticsFlags.bPerformance)  Diagnostics_Handler();
 }
 
 
 /*****************************************
  *****************************************/
-void Init_NXTUniversalRCInterface(void)
+void Init_ArduNXT(void)
 {
-  // Configure ATMega Hardware for NXTUniversalRCInterface
+  // Configure ATMega Hardware for ArduNXT
   // based on functionality of Ardupilot PCB
   // PD0 = RS232 Serial Data input
   // PD1 = RS232 Serial Data output
+// Assignments which are commented out are initialised in the appropriate module...  
 //  pinMode(2,INPUT);      // RC Input pin 0
 //  pinMode(3,INPUT);      // RC Input pin 1
 //  pinMode(4,INPUT);      // MUX output
@@ -175,12 +220,13 @@ void Init_NXTUniversalRCInterface(void)
 //  pinMode(9,OUTPUT);     // Servo output pin 0
 //  pinMode(10,OUTPUT);    // Servo output pin 1
 //  pinMode(11,INPUT);     // RC Input pin 3
-  pinMode(12,OUTPUT);    // Blue LED output pin
-  pinMode(13,OUTPUT);    // Yellow LED output pin
+//  pinMode(12,OUTPUT);    // Blue LED output pin
+//  pinMode(13,OUTPUT);    // Yellow LED output pin
 
   // Initialise basic variables
   g_DiagnosticsFlags.u8Value = 0U;
-
+  g_MiscFlags.u8Value = 0U;
+  
   // Initialise Serial Port
   Serial.begin(SERIAL_BAUD);  
   
@@ -191,15 +237,17 @@ void Init_NXTUniversalRCInterface(void)
   
   Load_Settings();//Loading saved settings
   
-  //TEMP
-  g_DiagnosticsFlags.u8Value = 0xFB;  // Turn on all diagnostics of interest
+  // Override saved settings
+//g_DiagnosticsFlags.u8Value = 0xFB;  // Turn on all diagnostics of interest
   
+  // Initialise all modules
   Save_Settings();
   Init_Multiplexer();
   Init_RCInputCh();
   Init_ServoOutput();
   Init_NXTIIC();
-//  Init_GPS();
+  Init_GPS();
+
   // Everything initialised - enable interrupts
   sei();
 }

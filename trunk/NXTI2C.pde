@@ -15,11 +15,11 @@
  *  The NXT is the Master and we are the slave IIC device.
  *  Lego NXT IIC operates at approximately 9600Baud, but as we are  
  *  the slave we don't have to do anything specific for this.
- *  RobotC can support faster IIC operation and this device should
- *  be able to work with that too.
+ *  RobotC can support faster IIC operation, this device can
+ *  work with the "sensorI2CCustomFast" configuraiton.
  *
  *  All messages start with our slave address which is defined
- *  by ARDUPILOT_I2C_ADDRESS (the twi.c code takes care
+ *  by ARDUPILOT_I2C_ADDRESS (the twi4nxt.c code takes care
  *  of only responding to messages which start with this
  *  address). Most Lego Sensors use an address of 0x01 as 
  *  there is only one sensor connected per NXT IIC Sensor 
@@ -27,6 +27,8 @@
  *  of the addressing byte in IIC is used to indicate read
  *  or write operations, thus for a read the byte is 0x02
  *  and for write it is 0x03) 
+ *  However, when used in Mindsensors NXT Servo Sensor compatibility mode
+ *  the address is 0x58 (i.e. 0xB0 and 0xB1)
  *
  *  The NXT reads and writes data from/to memory 
  *  mapped registers, using an 8 bit register address.
@@ -46,11 +48,7 @@
 
 /*************************************************************
  *  Todo:
- *  1) Modify twi4nxt.c to include a timeout so that we 
- *  can get out of a state where we are left driving SDA low,
- *  probably as a result of having missed a clock pulse.
- *  
- *  2) Do we need any #pragmas to ensure that the m_NXTInterfaceData
+ *  1) Do we need any #pragmas to ensure that the m_NXTInterfaceData
  *  structure is byte packed?
  *
  ************************************************************/
@@ -64,13 +62,15 @@
 //---------------------------------------------------------------------
 // Constant Definitions
 //---------------------------------------------------------------------
+#ifdef MINDSENSORS_NXT_SERVO_COMPATIBLE
+#define ARDUNXT_I2C_ADDRESS			((uint8_t)(0x58))        	// Our IIC slave address (this is a 7 bit value)
+#else
 #define ARDUNXT_I2C_ADDRESS			((uint8_t)(0x01))        	// Our IIC slave address (this is a 7 bit value)
-                                                                                // As the NXT has a port per sensor - 
-//#define NXT_SOFTWARE_VERSION			(0x01)				// Software version byte which can be read by NXT
+#endif                                                                       
 #define NXT_SHARED_CONST_DATA_OFFSET            (0x00)				// The address offset of the first read only register
 #define NXT_SHARED_CONST_DATA_SIZE		(0x18)				// The number of bytes allocated to the const memory
 #define NXT_SHARED_DATA_OFFSET			(0x40)				// The address offset of the first read/write register
-#define NXT_SHARED_DATA_SIZE			(0x20)				// The number of bytes allocated to the shared memory (See below)
+#define NXT_SHARED_DATA_SIZE			(0x40)				// The number of bytes allocated to the shared memory (See below)
 #define NXT_TRANSACTION_TIMEOUT			(100U)				// number of milliseconds since last valid data transfer before we timeout connection
 #define NXT_VERSION				'V','1','.','0','0',0,0,0	// Version string - must be 8 characters
 #define NXT_MANUFACTURER			'D','I','Y','D','r','o','n','e'	// Manufacturer string - must be 8 characters
@@ -79,7 +79,17 @@
 // If you want an LED to indicate the state of the NXT connection define which pin it is on here
 // obviously you will need to be careful not to make use of this pin elsewhere in your code.
 // If you don't want an NXT status LED then do not define NXT_LED_PIN
-#define NXT_LED_PIN		(13)
+#define NXT_LED_PIN              		(13)
+
+#ifdef MINDSENSORS_NXT_SERVO_COMPATIBLE
+#define NUM_SERVOS                              (8)                             // Number of Servos we have control registers for
+                                                                                // Although we don't physically have control of this
+                                                                                // many outputs this makes the registers compatible
+                                                                                // with the Mindsensors NXT Servo Sensor 
+#else
+#define NUM_SERVOS                              (4)                             // Number of Servos we have control registers for
+#endif                                                                                
+#define DFLT_SERVO_SPEED                        (50)                            // 50uS pulse width change per frame                                                                                
 
 
 //---------------------------------------------------------------------
@@ -112,7 +122,8 @@ const static union
 		char	szManufacturer[8];
 		char	szDeviceName[8];
 	} Fields;
-} m_NXTInterfaceConstData = {
+} m_NXTInterfaceConstData = 
+{
 	NXT_VERSION,								// Version string - must be 8 characters
 	NXT_MANUFACTURER,							// Manufacturer string - must be 8 characters
 	NXT_DEVICE_NAME								// Device Name string - must be 8 characters
@@ -121,6 +132,8 @@ const static union
 // This is the main structure used to enable the NXT to access variables
 // which are meaningful on the Arduino.
 // The NXT needs to be aware that the Arduino is little endian
+// Although strictly speaking this should have a 'volatile' qualifier is it more trouble than it is worth
+// given the structure of the code.
 static union 
 {
 	// The NXT accesses data by register address, which
@@ -131,23 +144,26 @@ static union
 	// BE CAREFUL If you add or remove fields, or change their width (number of bytes)
 	// as this will cause the register addresses to move - code in the NXT will need
 	// to be modified to keep in sync.
+        //
+
 	struct 
 	{						// Register address (starting at NXT_SHARED_DATA_OFFSET)
 		byte    u8SoftwareVersion;		// 0x40
-                byte    u8Command;                      // 0x41 Simple Commands from NXT
-		byte	u8MuxMode;			// 0x42 MUX/Mode 0,1 or 2
-		byte	u8RawCh1;			// 0x43	Remote Control Input Channel 1
-		byte	u8RawCh2;        		// 0x44 Remote Control Input Channel 2
-                byte    u8RawCh3;                       // 0x45 n/a
-                byte    u8RawCh4;                       // 0x46 n/a
-                INT_8   i8Ch1;                          // 0x47 Signed Remote Control Input Channel 1
-                INT_8   i8Ch2;                          // 0x48 Signed Remote Control Input Channel 2
-                INT_8   i8Ch3;                          // 0x49 Signed Remote Control Input Channel 3
-                INT_8   i8Ch4;                          // 0x4A Signed Remote Control Input Channel 4
-		byte	u8Servo0;			// 0x4B PWM Servo Output
-		byte	u8Servo1;			// 0x4C PWM Servo Output
-		byte	u8Servo2;			// 0x4D PWM Servo Output
-                byte    u8Servo3;                       // 0x4E PWM Servo Output 
+
+                // Initial structure is compatible with the Mindsensors NXT Servo Sensor
+                volatile byte    u8Command;                      // 0x41 Simple Commands from NXT
+		volatile UINT_16 u16ServoPosition[NUM_SERVOS];   // 0x42 - 0x51 16bit PWM Servo Position Registers (time in uS)
+                volatile byte    u8ServoSpeed[NUM_SERVOS];       // 0x52 - 0x59 8bit Servo Speed
+                volatile byte    u8QuickPosition[NUM_SERVOS];    // 0x5A - 0x61 8bit Quick PWM Servo Position Registers 
+                
+                // Extension fields
+                
+                // Remote Control Inputs
+		byte	u8MuxMode;			// 0x62 Multiplexer Mode (0 = Radio Control, 1 = NXT Control)
+		UINT_16 u16RadioControl[NUM_PWMI];	// 0x63 - 0x6A Remote Control Input (Raw value in uS)
+                INT_8   i8RadioControl[NUM_PWMI];       // 0x6B - 0x6E Signed Remote Control Input (Signed shift from centre)
+
+                // GPS 
                 GPSRecord  GPS;
 	} Fields;
 } m_NXTInterfaceData;
@@ -162,6 +178,9 @@ static uint8_t			m_u8NXTAddress;				// Register address that the NXT is currentl
 static unsigned long    	m_u32NXTLastRequest;            	// Time (in millis) at which the last valid request occured
 static bool			m_bNXTAlive;				// Record of whether we believe that NXT communications are alive
 static bool                     m_bNXTActivity;                         // Flag that there has been interrupt handled data transfer activity
+
+// Servo Control
+static UINT_16                  m_u16ServoPosition[NUM_SERVOS];         // Current Position of Servo
 
 // A few sanity checks
 #if (255 < (NXT_SHARED_DATA_OFFSET + NXT_SHARED_DATA_SIZE))
@@ -202,8 +221,15 @@ void Init_NXTIIC(void)
 	// Initialise NXT shared data to 0
 	for (i = 0; i < NXT_SHARED_DATA_SIZE; i++)
 	{
-		m_NXTInterfaceData.au8Raw[i] = 0;
+		m_NXTInterfaceData.au8Raw[i] = 0U;
 	}
+        // Initialise NXT Servo Control - speed and current position
+        for (i = 0; i < NUM_SERVOS; i++)
+        {
+                m_u16ServoPosition[i] = 0U;
+                m_NXTInterfaceData.Fields.u8ServoSpeed[i] = DFLT_SERVO_SPEED;
+        }
+
 }  
 
 
@@ -227,7 +253,7 @@ void NXTOnRequest(void)
 
 		if (u8Offset < NXT_SHARED_CONST_DATA_SIZE)
 		{
-			twi4nxt_transmitConst(&m_NXTInterfaceConstData.au8Raw[u8Offset], 1);
+                        twi4nxt_transmitConst(&m_NXTInterfaceConstData.au8Raw[u8Offset], 1);
 		}
 		else
 		{
@@ -246,8 +272,24 @@ void NXTOnRequest(void)
 
 		if (u8Offset < NXT_SHARED_DATA_SIZE)
 		{
-			twi4nxt_transmit(&m_NXTInterfaceData.au8Raw[u8Offset], 1);
-			
+#ifdef MINDSENSORS_NXT_SERVO_COMPATIBLE
+                        // For full compatibility with Mindsensors NXT Servo Sensor:
+                        // We need to read back different values from some fields rather than a copy of the values that have been written.
+                        // This is a bit of a pain and not what I would recommend for any new features as it requires extra code each time
+                        // and makes the code more complex - which is significant given that this is being executed in an interrupt
+                        if ((u8Offset >= 2) && (u8Offset < (2 + (NUM_SERVOS << 1))))
+                        {
+                              // Return the current acutal position rather than the target position which has been set
+                              // We know that these values are 2 bytes wide - so we can send both bytes for transmission  
+  			      twi4nxt_transmit((byte *)&m_u16ServoPosition[(u8Offset>>1)-1], 2);
+    		              m_u8NXTAddress++;  // Compensate address for the fact that we have sent two bytes (rather than the usual one) 
+                        }
+                        else
+#endif // MINDSENSORS_NXT_SERVO_COMPATIBLE                        
+                        {
+                              // Normal (recommended) path to read bytes from shared memory area
+  			      twi4nxt_transmit((byte *)&m_NXTInterfaceData.au8Raw[u8Offset], 1);
+			}
 			// Auto increment to next byte - so that NXT can make multi-byte requests efficiently
 			m_u8NXTAddress++;
 		}
@@ -368,11 +410,17 @@ void NXT_Handler(void)
 			// Values in Fields can be used directly by other code, or we can take notice of them regularly here.
 			// Examples
 			// ========
-			ServoOutput_u8(0, m_NXTInterfaceData.Fields.u8Servo0);
-			ServoOutput_u8(1, m_NXTInterfaceData.Fields.u8Servo1);
-			ServoOutput_u8(2, m_NXTInterfaceData.Fields.u8Servo2);
-			ServoOutput_u8(3, m_NXTInterfaceData.Fields.u8Servo3);
-                        	
+                        for (byte i = 0; i < NUM_SERVOS; i++)
+                        {
+                          if (m_NXTInterfaceData.Fields.u8QuickPosition[i])
+                          {
+                            // We have been given a "Quick" position (which has units of 10uS) to apply immediately
+                            m_u16ServoPosition[i] = 0;  // Clear current position so that the Quick position takes effect for the next frame
+                            m_NXTInterfaceData.Fields.u16ServoPosition[i] = m_NXTInterfaceData.Fields.u8QuickPosition[i] * 10;
+                            // Clear out record of Quck position 'request' now that we have actioned it
+                            m_NXTInterfaceData.Fields.u8QuickPosition[i] = 0;
+                          }
+                        }                                             	
 //                      m_u8NXTNumReceived = 0;
 		}
 
@@ -384,6 +432,60 @@ void NXT_Handler(void)
 	NXTDiagnostics();	// If you want to enable this remove teh m_u8NXTNumReceived = 0; line above
 }
 
+// Prototype Code for Speed Control
+// Each time a frame of Servo pulses have been output we update the position according to the defined speed
+void NXTOnServoUpdate(void)
+{
+  UINT_16  u16TargetServoPosition;
+  
+  for (byte i = 0; i < NUM_SERVOS; i++)
+  {
+    u16TargetServoPosition = m_NXTInterfaceData.Fields.u16ServoPosition[i];
+    
+    if (u16TargetServoPosition)
+    {
+      // We have a valid Target Position
+      if (m_NXTInterfaceData.Fields.u8ServoSpeed[i] && m_u16ServoPosition[i])
+      {
+        // We have a valid Speed (and previous position)
+        if (u16TargetServoPosition < m_u16ServoPosition[i])
+        {
+          // Need to reduce pulse width to move towards target position
+          m_u16ServoPosition[i] -= m_NXTInterfaceData.Fields.u8ServoSpeed[i];
+          if (m_u16ServoPosition[i] < u16TargetServoPosition)
+          {
+            // Limit movement to target position
+            m_u16ServoPosition[i] = u16TargetServoPosition;
+          }
+          ServoOutput(i, m_u16ServoPosition[i]);  // Update PWM generation
+        }
+        else if (u16TargetServoPosition > m_u16ServoPosition[i])
+        {
+          // Need to increase pulse width to move towards target position
+          m_u16ServoPosition[i] += m_NXTInterfaceData.Fields.u8ServoSpeed[i];
+          if (m_u16ServoPosition[i] > u16TargetServoPosition)
+          {
+          // Limit movement to target position
+            m_u16ServoPosition[i] = u16TargetServoPosition;
+          }
+          ServoOutput(i, m_u16ServoPosition[i]);  // Update PWM generation
+        }
+      }
+      else if (m_u16ServoPosition[i] != u16TargetServoPosition)
+      {
+        // If the Speed register is zero then the servo is set to the target
+        // position immediately
+        m_u16ServoPosition[i] = u16TargetServoPosition;      
+        ServoOutput(i, m_u16ServoPosition[i]);  // Update PWM generation
+      }
+    }
+    else
+    {
+      m_u16ServoPosition[i] = 0;    // Disabled           
+      ServoOutput(i, 0);  // Disable PWM Generation on this channel
+    }
+  }
+}
 
 // Function to update fields in the NXT shared memory area
 static void NXTUpdateValues(void)
@@ -392,17 +494,15 @@ static void NXTUpdateValues(void)
   // ========
   m_NXTInterfaceData.Fields.u8MuxMode = Multiplexer_State();
   
-//  if (TRUE)
+  for (byte i=0; i< NUM_PWMI; i++)
   {
-    // RCInput values (may) have been updated
-    m_NXTInterfaceData.Fields.i8Ch1     = RCInput_Ch(0) / 4;	// 8 bit version of Signed PWM input
-    m_NXTInterfaceData.Fields.u8RawCh1  = RCInput_RawCh(0) >> 3;   // 8 bit version of Raw (unsigned) PWM input
-    m_NXTInterfaceData.Fields.i8Ch2     = RCInput_Ch(1) / 4;	// 8 bit version of Signed PWM input
-    m_NXTInterfaceData.Fields.u8RawCh2  = RCInput_RawCh(1) >> 3;   // 8 bit version of Raw (unsigned) pWM input
-    m_NXTInterfaceData.Fields.i8Ch3     = RCInput_Ch(2) / 4;	// 8 bit version of Signed PWM input
-    m_NXTInterfaceData.Fields.u8RawCh3  = RCInput_RawCh(2) >> 3;   // 8 bit version of Raw (unsigned) PWM input
-    m_NXTInterfaceData.Fields.i8Ch4     = RCInput_Ch(3) / 4;	// 8 bit version of Signed PWM input
-    m_NXTInterfaceData.Fields.u8RawCh4  = RCInput_RawCh(3) >> 3;   // 8 bit version of Raw (unsigned) PWM input
+    if (g_RCIFlags[i].bUpdate)
+    {
+      // RCInput values (may) have been updated
+//    m_NXTInterfaceData.Fields.i8RadioControl[i] = RCInput_Ch(i) / 4;	   // 8 bit version of Signed Radio Control input
+      m_NXTInterfaceData.Fields.u16RadioControl[i] = RCInput_RawCh(i);     // Radio Control pulse width in uS
+      g_RCIFlags[i].bUpdate = FALSE;                                       // Clear Flag to indicate that value has been updated           
+    }
   }
   
   if (g_GPSMsgFlags.bUpdate)
@@ -413,17 +513,20 @@ static void NXTUpdateValues(void)
 }
 
 
+// Low level NXT I2C Diagnostics
 static void NXTDiagnostics(void)
 {
 	if (m_u8NXTNumReceived)
 	{
-	    Serial.print("Received ");
+            // Number of bytes received from NXT in monitoring period (excluding the device addressing byte)
+	    Serial.print("Rx ");
 	    Serial.println((int)m_u8NXTNumReceived);
 	    m_u8NXTNumReceived = 0;
 	}
 	if (m_u8NXTNumRequests)
 	{
-	    Serial.print("Requested ");
+            // Number of bytes requested by the NXT in monitoring period
+	    Serial.print("Rq ");
 	    Serial.println((int)m_u8NXTNumRequests);
             m_u8NXTNumRequests = 0;
 	}

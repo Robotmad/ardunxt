@@ -242,8 +242,8 @@ ISR(INT1_vect)
 //
 // 16, 17 in use for Serial Tx & Rx
 // 18, 19 in use for INT0,1 external interrupts
-// PCINT20 = PD4 = TMISO - resuse
-// PCINT21 = PD5 = MODE - resuse
+// PCINT20 = PD4 = MUX
+// PCINT21 = PD5 = D5
 // PCINT22 = PD6 = D6 (RCInput Ch 3)
 // PCINT23 = PD7 = D7
 

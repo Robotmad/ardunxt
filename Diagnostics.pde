@@ -1,7 +1,7 @@
 // Performance Diagnostics Reporting
-#define MIN_REPORTED_EXECUTION_TIME     (10)                  // Report instances of any execution loops which take more than 10mS to execute
+#define MIN_REPORTED_EXECUTION_TIME     (5)                   // Report instances of any execution loops which take more than 10mS to execute
                                                               // Taking much longer than this can lead to RC Input frames being missed
-#define REPORTING_PERIOD                (1000)                 // Report perofrmance every 1000mS
+#define REPORTING_PERIOD                (1000)                // Report perofrmance every 1000mS
 
 UINT_32                                  m_u32Loops;          // Loop Counter
 UINT_32                                  m_u32LastLoopTime;   // Time at end of last loop execution
@@ -27,7 +27,7 @@ void Diagnostics_Handler(void)
   if (MIN_REPORTED_EXECUTION_TIME < u16ExecutionTime)
   {
       // Report a long execution time
-      Serial.print("Execution took (mS): ");
+      Serial.print("Execution (mS): ");
       Serial.println(u16ExecutionTime);
   }
   m_u32LastLoopTime = u32Now;
@@ -38,7 +38,7 @@ void Diagnostics_Handler(void)
     // Time to report number of executions
     m_u32LastDiagTime = u32Now;
     Serial.print("Loops: ");
-    Serial.println(m_u32Loops/100);    
+    Serial.println(m_u32Loops);    
     m_u32Loops = 0;
   }
   m_u32Loops++;        // Count the number of times the loop is executed

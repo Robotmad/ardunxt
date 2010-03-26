@@ -41,13 +41,13 @@
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
 #endif
 
-#ifndef CPU_FREQ
-#define CPU_FREQ 16000000L
-#endif
+//#ifndef CPU_FREQ
+//#define CPU_FREQ 16000000L
+//#endif
 
-#ifndef TWI_FREQ
-#define TWI_FREQ 100000L
-#endif
+//#ifndef TWI_FREQ
+//#define TWI_FREQ 100000L
+//#endif
 
 #ifndef TWI_BUFFER_LENGTH
 #define TWI_BUFFER_LENGTH 16
@@ -104,9 +104,9 @@ void twi4nxt_init(void)
   #endif
 
   // initialize twi prescaler and bit rate
-  cbi(TWSR, TWPS0);
-  cbi(TWSR, TWPS1);
-  TWBR = ((CPU_FREQ / TWI_FREQ) - 16) / 2;
+  //cbi(TWSR, TWPS0);
+  //cbi(TWSR, TWPS1);
+  //TWBR = ((CPU_FREQ / TWI_FREQ) - 16) / 2;
 
   /* twi bit rate formula from atmega128 manual pg 204
   SCL Frequency = CPU Clock Frequency / (16 + (2 * TWBR))
@@ -121,6 +121,12 @@ void twi4nxt_init(void)
 //  twi_txBuffer = (uint8_t*) calloc(TWI_BUFFER_LENGTH, sizeof(uint8_t));
 //  twi_rxBuffer = (uint8_t*) calloc(TWI_BUFFER_LENGTH, sizeof(uint8_t));
 
+}
+
+// Return true if we are Ready (i.e. not in the middle of a transaction) 
+bool twi4nxt_IsReady(void)
+{
+  return(twi_state==TWI_READY);
 }
 
 /* 

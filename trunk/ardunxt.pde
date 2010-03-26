@@ -45,9 +45,9 @@ extern void twi4nxt_attachSlaveRxEvent( void (*)(byte*, uint8_t) );
 extern void twi4nxt_attachSlaveTxEvent( void (*)(void) );
 
 #define TITLE_STRING    "ArduNXT Universal RC Interface"
-#define VERSION_STRING  "V1.06"            // This is NOT the same as the version reported over the NXT interface 
+#define VERSION_STRING  "V1.07"            // This is NOT the same as the version reported over the NXT interface 
                                            // which is defined in NXTI2C.pde
-#define SERIAL_BAUD     (57600)            // Baud Rate used for GPS and Diagnostics
+#define SERIAL_BAUD     (38400)            // Baud Rate used for GPS and Diagnostics
 
 #define NUM_PWMI	(4)                // Number of RCINput (Pulse Width Measurement) Channels 
 
@@ -111,6 +111,7 @@ typedef union {
     unsigned bSpeed:1;		// Speed and Heding
     unsigned bValid:1;          // GPS Fix Status (i.e. 2D or better)
     unsigned bUpdate:1;         // Flag to indicate that data has been updated (i.e. a full set of new values)
+    unsigned bPresent:1;        // GPS module detected
   };
   struct {
     UINT_8 u8Value;
@@ -124,8 +125,6 @@ typedef struct
 //	UINT_16			u16Date;		// binary format date encoding	
 	UINT_24			u24Time;		// Seconds since midnight (UTC))
 	UINT_8			u8CentiSeconds;	        // CentiSeconds	
-//	UINT_32			u32Time;		// Milliseconds TOW
-//	UINT_32			u32DateTime;      	// combined date & time
 	INT_32			i32Latitude;      	// Latitude (min/10000)
 	INT_32			i32Longitude;      	// Longitude (min/10000)
 	UINT_16			u16Altitude;    	// Altitude (m/10)
@@ -238,7 +237,7 @@ void Init_ArduNXT(void)
   Load_Settings();//Loading saved settings
   
   // Override saved settings
-//g_DiagnosticsFlags.u8Value = 0xFB;  // Turn on all diagnostics of interest
+  g_DiagnosticsFlags.u8Value = 0xF5;  // Turn on all diagnostics of interest
   
   // Initialise all modules
   Save_Settings();

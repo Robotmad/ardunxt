@@ -28,7 +28,7 @@
  *  or write operations, thus for a read the byte is 0x02
  *  and for write it is 0x03) 
  *  However, when used in Mindsensors NXT Servo Sensor compatibility mode
- *  the address is 0x58 (i.e. 0xB0 and 0xB1)
+ *  the address is 0x58 (i.e. 0xB0/1 when combined with direction bit)
  *
  *  The NXT reads and writes data from/to memory 
  *  mapped registers, using an 8 bit register address.
@@ -48,9 +48,8 @@
 
 /*************************************************************
  *  Todo:
- *  1) Do we need any #pragmas to ensure that the m_NXTInterfaceData
- *  structure is byte packed?
- *
+ *  1) Control over standard features set or overrides
+ *  2) Protect 16 bit values read/write by NXT from being updated during access
  ************************************************************/
 
 // Make these includes in the main sketch file
@@ -129,9 +128,10 @@ const static union
 	NXT_DEVICE_NAME								// Device Name string - must be 8 characters
 };
 
+
 // This is the main structure used to enable the NXT to access variables
 // which are meaningful on the Arduino.
-// The NXT needs to be aware that the Arduino is little endian
+// The NXT needs to be aware that the Arduino is little endian (which the NXT appears to be too)
 // Although strictly speaking this should have a 'volatile' qualifier is it more trouble than it is worth
 // given the structure of the code.
 static union 
@@ -145,7 +145,6 @@ static union
 	// as this will cause the register addresses to move - code in the NXT will need
 	// to be modified to keep in sync.
         //
-
 	struct 
 	{						// Register address (starting at NXT_SHARED_DATA_OFFSET)
 		byte    u8SoftwareVersion;		// 0x40
@@ -164,7 +163,7 @@ static union
                 INT_8   i8RadioControl[NUM_PWMI];       // 0x6B - 0x6E Signed Remote Control Input (Signed shift from centre)
 
                 // GPS 
-                GPSRecord  GPS;
+                GPSRecord  GPS;                         // 0x6F -    
 	} Fields;
 } m_NXTInterfaceData;
 
@@ -391,6 +390,8 @@ void NXT_Handler(void)
 		if (m_u8NXTNumReceived)
 		{
 			// We have received some data from NXT - so something has been changed
+			// Values in Fields can be used directly by other code, or we can take notice of them regularly here.
+                        
                         // Decode and handle COMMANDS from NXT
                         switch (m_NXTInterfaceData.Fields.u8Command)
                         {
@@ -405,9 +406,7 @@ void NXT_Handler(void)
                         
                         // While the number of variables is small it is easier to just update everything,
 			// if there were a lot more we might want to track which specific fields had been changed.
-			//
 
-			// Values in Fields can be used directly by other code, or we can take notice of them regularly here.
 			// Examples
 			// ========
                         for (byte i = 0; i < NUM_SERVOS; i++)
@@ -421,15 +420,24 @@ void NXT_Handler(void)
                             m_NXTInterfaceData.Fields.u8QuickPosition[i] = 0;
                           }
                         }                                             	
-//                      m_u8NXTNumReceived = 0;
 		}
 
 		// Values in Fields (to be read by tbhe NXT) could be written to directly by applicable code throught the system,
-		// or we can update them regularly here.
-		NXTUpdateValues();
+		// or we can update them regularly here (which enables us to avoid changing multi-byte fields while the NXT may be part way through reading them).
+                if (twi4nxt_IsReady())
+                {
+		        NXTUpdateValues();
+                }
 	}
-
-	NXTDiagnostics();	// If you want to enable this remove teh m_u8NXTNumReceived = 0; line above
+	if (g_DiagnosticsFlags.bNXTInterface)
+        {
+                NXTDiagnostics();
+        }
+        else
+        {
+                m_u8NXTNumReceived = 0;
+        }
+          
 }
 
 // Prototype Code for Speed Control
@@ -487,6 +495,7 @@ void NXTOnServoUpdate(void)
   }
 }
 
+
 // Function to update fields in the NXT shared memory area
 static void NXTUpdateValues(void)
 {
@@ -499,8 +508,12 @@ static void NXTUpdateValues(void)
     if (g_RCIFlags[i].bUpdate)
     {
       // RCInput values (may) have been updated
-//    m_NXTInterfaceData.Fields.i8RadioControl[i] = RCInput_Ch(i) / 4;	   // 8 bit version of Signed Radio Control input
-      m_NXTInterfaceData.Fields.u16RadioControl[i] = RCInput_RawCh(i);     // Radio Control pulse width in uS
+      int      i16RCI = RCInput_Ch(i) / 4;                                 // Scale so that typical RC stick position will fit in a byte  
+      i16RCI = constrain(i16RCI, -128, 127);                               // constrain value to fit in a single signed byte 
+      m_NXTInterfaceData.Fields.i8RadioControl[i] = (INT_8)i16RCI;         // 8 bit version of Signed Radio Control input (units of 4uS)
+      
+      m_NXTInterfaceData.Fields.u16RadioControl[i] = RCInput_RawCh(i);     // Read Value in uS
+
       g_RCIFlags[i].bUpdate = FALSE;                                       // Clear Flag to indicate that value has been updated           
     }
   }

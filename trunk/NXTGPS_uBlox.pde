@@ -2,7 +2,11 @@
 * Here you have all the parsing stuff for uBlox
 ****************************************************************/
 
-//
+// Status LED:
+// Off -      No GPS detected
+// Flashing - GPS present but no valid position
+// On -       GPS present and valid position received recently
+
 // If you want an LED to indicate the state of the GPS define which pin it is on here
 // obviously you will need to be careful not to make use of this pin elsewhere in your code.
 // If you don't want an GPS status LED then do not define GPS_LED_PIN
@@ -10,14 +14,17 @@
 
 // Define the maximum allowed time between receiving valid fixes for the LED to remain on
 #define GPS_LED_TIMEOUT                         (1100)  // milli seconds (appropriate for 1Hz GPS)
+#define GPS_LED_FLASH_PERIOD                    (500)   // milli seconds flash period when searching 
 
 //---------------------------------------------------------------------
 // Macro Definitions
 //---------------------------------------------------------------------
 #if defined(GPS_LED_PIN)
 #define GPS_LED(state)	digitalWrite(GPS_LED_PIN, state)
+#define GPS_LED_STATE() digitalRead(GPS_LED_PIN)
 #else
 #define GPS_LED(state)	{}
+#define GPS_LED_STATE() (TRUE)
 #endif
 
 
@@ -87,8 +94,10 @@ void Init_GPS(void)
 ****************************************************************/
 void GPS_Handler(void)
 {
-  // Process and characters which have been received.
-  while (Serial.available() > 0)
+  bool bExit = FALSE;
+  
+  // Process any characters which have been received.
+  while (!bExit && (Serial.available() > 0))
   {
     g_u8RxByte = Serial.read();    
     
@@ -208,7 +217,9 @@ void GPS_Handler(void)
       {
         // Valid message received complete
         m_pGPS = g_au8GPSBuffer0;
+        g_GPSMsgFlags.bPresent = TRUE;
         UBX_Decode();
+        bExit = TRUE;  // Don't allow more than one message to be decoded per execution of the handler
       }	
       else
       {
@@ -230,6 +241,7 @@ void GPS_Handler(void)
     if(millis() - GPS_timer > GPS_LED_TIMEOUT)
     {
       GPS_LED(LOW);				// If we don't receive any valid fixses in defined time turn off gps fix LED...
+      GPS_timer = millis();                // restart timer for next period
     
       // Discard any partially received data  
       g_GPSMsgFlags.bValid = FALSE;
@@ -237,6 +249,34 @@ void GPS_Handler(void)
       g_GPSMsgFlags.bLatLon = FALSE;
       g_GPSMsgFlags.bAltitude = FALSE;
       g_GPSMsgFlags.bSpeed = FALSE;			
+    }
+  }
+  else if (g_GPSMsgFlags.bPresent)
+  {
+    // ALthough we don't have a valid fix we have detected the presence of a GPS module - so we are searching for satellites
+    if (GPS_timer)
+    {
+      if ((millis() - GPS_timer) > GPS_LED_FLASH_PERIOD)
+      {
+        // On or Off period has finished...
+        GPS_LED(GPS_LED_STATE()?LOW:HIGH);   // Toggle LED On/Off 
+        GPS_timer = millis();                // restart timer for next period
+        g_GPSMsgFlags.bPresent = FALSE;      // We need to receive something from the GPS module to indicate that it is present
+      }
+    }
+    else
+    {
+        GPS_LED(HIGH);                       // Turn LED On 
+        GPS_timer = millis();                // Start timer for On period
+    }
+  }
+  else if (GPS_timer)
+  {
+    if ((millis() - GPS_timer) > GPS_LED_FLASH_PERIOD)
+    {
+      // GPS Module not present
+      GPS_LED(LOW);
+      GPS_timer = 0U;
     }
   }
 }
@@ -463,47 +503,43 @@ void GPSByte(void)
 void NMEA_Decode(void)
 {
   // TODO - import decoding from other projects  
+  // g_GPSMsgFlags.bPresent = TRUE;
 }
 
 void GPS_Diagnostics(void)
 {
-  if (g_GPSMsgFlags.bUpdate)
-  {
-    // Diagnostics for GPS    
-    // Time
+  // Diagnostics for GPS    
+  // Time
 //  Serial.print("TOW: ");
-    Serial.print(m_GPSNew.u24Time);
-    Serial.print(".");
-    Serial.print((int)m_GPSNew.u8CentiSeconds);
-    Serial.print("S, ");
-    // Longitude (10,000th Minutes)
+  Serial.print(m_GPSNew.u24Time);
+  Serial.print(".");
+  Serial.print((int)m_GPSNew.u8CentiSeconds);
+  Serial.print("S, ");
+  // Longitude (10,000th Minutes)
 //  Serial.print("Lon: ");
-    Serial.print(m_GPSNew.i32Longitude);
+  Serial.print(m_GPSNew.i32Longitude);
 //  Serial.print(" Min(/10,000)");
-    Serial.print(", ");
-    // Latitude (10,000th Minutes)
+  Serial.print(", ");
+  // Latitude (10,000th Minutes)
 //  Serial.print("Lat: ");
-    Serial.print(m_GPSNew.i32Latitude);
+  Serial.print(m_GPSNew.i32Latitude);
 //  Serial.print(" Min(/10,000)");
-    Serial.print(", ");
-    // Altitude (m/10 scales to m)
+  Serial.print(", ");
+  // Altitude (m/10 scales to m)
 //  Serial.print("Alt: ");
-    Serial.print(m_GPSNew.u16Altitude/10);
+  Serial.print(m_GPSNew.u16Altitude/10);
 //  Serial.print("m");
-    Serial.print(", ");
-    // Speed over ground (2D)
+  Serial.print(", ");
+  // Speed over ground (2D)
 //  Serial.print("SOG: ");
-    Serial.print(m_GPSNew.u16Speed);
+  Serial.print(m_GPSNew.u16Speed);
 //  Serial.print(" cm/s");
-    Serial.print(", ");
-    // Heading (100ths of a degree)
+  Serial.print(", ");
+  // Heading (100ths of a degree)
 //  Serial.print("COG: ");
-    Serial.print(m_GPSNew.u16Heading/100);
+  Serial.print(m_GPSNew.u16Heading/100);
 //  Serial.println(" Deg(/100)");  }
-    Serial.println(" ");
-  
-    g_GPSMsgFlags.bUpdate = FALSE;
-  }
+  Serial.println(" ");
 }
 
 //#endif

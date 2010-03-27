@@ -4,16 +4,9 @@
  
 /*
 // Aspects of this software were derived from code used in ArduPilot
-   By Chris Anderson, Jordi Munoz
-   Special thanks to: 
-  -Bill Premerlani
-  -HappyKillMore
-  -James Cohen.
-  -JB from rotorFX.
-  -Automatik.
-  -Fefenin
-  -Peter Meister
-  -Remzibi
+// By Chris Anderson, Jordi Munoz, Bill Premerlani, HappyKillMore
+// James Cohen, JB from rotorFX, Automatik, Fefenin, Peter Meister
+// & Remzibi.
 */
 
 // Standard Arduino Serial output is unbuffered so be careful about the impact that lots of diagnostics has on performance.
@@ -27,13 +20,11 @@
 
 
 //TODO
-// consider RC working - in control of MUX/Mode, no RC input - need to take control of PWM outputs
 // Commands from NXT:
-//  set centre
+//  set RC Input centre
 //  save config
 //  control Mux
 // Single status byte for NXT to read to say if anything has changed (bitmap of what?)
-// Double buffer GPS data so that you can read it all without risk of partial update...
 
 #include <avr/interrupt.h>
 #include <avr/eeprom.h>
@@ -49,10 +40,11 @@ extern void twi4nxt_attachSlaveTxEvent( void (*)(void) );
                                            // which is defined in NXTI2C.pde
 #define SERIAL_BAUD     (38400)            // Baud Rate used for GPS and Diagnostics
 
-#define NUM_PWMI	(4)                // Number of RCINput (Pulse Width Measurement) Channels 
+#define NUM_PWMI	(4)                // Number of RCInput (Pulse Width Measurement) Channels 
 
 //#define ATTINY_IN_USE                    // If you do not hold the ATTiny, on the ArduPilot hardware, in reset then it is in control of the multiplexer
 #define MINDSENSORS_NXT_SERVO_COMPATIBLE   // If you want FULL compatibility with Mindsensors NXT Servo Sensor (I2C address and Servo Position Readback)
+
 
 // Some of the code has been migrated from a previous project which uses the following type definitions:
 typedef signed char   INT_8;
@@ -145,7 +137,7 @@ typedef union {
     unsigned bFall:1;        // We have recorded a timestamp for a falling edge
     unsigned bLost:1;        // We have lost a pulse measurements as the handler was not called frequently enough
     unsigned bTimerWrap:1;
-    unsigned bWrap:1;        // Need to add PWM_PERIOD to fall time  
+    unsigned bWrap:1;        // Flag that we need to add PWM_PERIOD to fall time  
   };
   struct {
     UINT_8 u8Value;

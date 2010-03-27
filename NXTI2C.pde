@@ -35,6 +35,9 @@
  *  Multiple bytes can be read or written at a time, with
  *  sutiable NXT code, as the register address is automatically
  *  incremented after each byte has been read/written.
+ *  While a data transfer is in progress the shared memory is not
+ *  updated by the ArduNXT, this is to avoid any multi-byte
+ *  values from changing between reading the individual bytes.
  *
  *  This code is generic and can be used to share any data
  *  with the NXT.  As the IIC actions required to behave as a
@@ -49,7 +52,7 @@
 /*************************************************************
  *  Todo:
  *  1) Control over standard features set or overrides
- *  2) Protect 16 bit values read/write by NXT from being updated during access
+ *
  ************************************************************/
 
 // Make these includes in the main sketch file
@@ -440,7 +443,7 @@ void NXT_Handler(void)
           
 }
 
-// Prototype Code for Speed Control
+// Servo Speed Control
 // Each time a frame of Servo pulses have been output we update the position according to the defined speed
 void NXTOnServoUpdate(void)
 {

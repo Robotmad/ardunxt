@@ -9,7 +9,7 @@ It supports:
   * 4 Channels of PWM Remote Control Input
 
 ArduNXT is fully compliant with the standards for NXT I2C based sensors, reporting the following strings:
-||Parameter||Address||Value||
+||*Parameter*||*Address*||*Value*||
 ||Version||0x00||V1.00||
 ||Manufacturer||0x08||DIYDrone||
 ||Device Name||0x10||ArduNXT||

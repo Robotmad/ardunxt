@@ -8,8 +8,8 @@ It supports:
   * 4 Channels of PWM Servo Control Output
   * 4 Channels of PWM Remote Control Input
 
-ArduNXT is fully compliant with the standards for NXT I2C based sensors, reporting the following strings:
-||*Parameter*||*Address*||*Value*||
+ArduNXT is fully compliant with the standards for NXT I2C based sensors, reporting the following strings (try scanning it with the RobotC sample program "I2C Scanner":
+||Parameter||Address||Value||
 ||Version||0x00||V1.00||
 ||Manufacturer||0x08||DIYDrone||
 ||Device Name||0x10||ArduNXT||
@@ -38,7 +38,14 @@ However, when ArduNXT used in Mindsensors NXT Servo Sensor compatibility mode th
 ||Servo 2 Position (MSB)||Write||0x47||?||
 ||Servo 3 Position (LSB)||Write||0x48||?||
 ||Servo 3 Position (MSB)||Write||0x49||?||
-More to Add here...
+||Remote Control Ch 1 Input (LSB)||Read||0x63||0||
+||Remote Control Ch 1 Input (MSB)||Read||0x64||0||
+||Remote Control Ch 2 Input (LSB)||Read||0x65||0||
+||Remote Control Ch 2 Input (MSB)||Read||0x66||0||
+||Remote Control Ch 3 Input (LSB)||Read||0x67||0||
+||Remote Control Ch 3 Input (MSB)||Read||0x68||0||
+||Remote Control Ch 4 Input (LSB)||Read||0x69||0||
+||Remote Control Ch 4 Input (MSB)||Read||0x6A||0||
 
 === Reading or Writing multiple bytes ===
 The NXT reads and writes data from/to memory mapped registers in the ARduNXT, using an 8 bit register address. Multiple bytes can be read or written at a time, with sutiable NXT code, as the register address is automatically incremented after each byte has been read/written.

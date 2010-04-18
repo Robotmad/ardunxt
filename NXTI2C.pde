@@ -19,7 +19,7 @@
  *  work with the "sensorI2CCustomFast" configuraiton.
  *
  *  All messages start with our slave address which is defined
- *  by ARDUPILOT_I2C_ADDRESS (the twi4nxt.c code takes care
+ *  by ARDUNXT_I2C_ADDRESS (the twi4nxt.c code takes care
  *  of only responding to messages which start with this
  *  address). Most Lego Sensors use an address of 0x01 as 
  *  there is only one sensor connected per NXT IIC Sensor 
@@ -76,21 +76,21 @@
 #define NXT_TRANSACTION_TIMEOUT			(100U)				// number of milliseconds since last valid data transfer before we timeout connection
 #define NXT_VERSION				'V','1','.','0','0',0,0,0	// Version string - must be 8 characters
 #define NXT_MANUFACTURER			'D','I','Y','D','r','o','n','e'	// Manufacturer string - must be 8 characters
-#define NXT_DEVICE_NAME				'R','C','i','/','f',0,0,0	// Device Name string - must be 8 characters
+#define NXT_DEVICE_NAME				'A','r','d','u','N','X','T',0	// Device Name string - must be 8 characters
 
 // If you want an LED to indicate the state of the NXT connection define which pin it is on here
 // obviously you will need to be careful not to make use of this pin elsewhere in your code.
 // If you don't want an NXT status LED then do not define NXT_LED_PIN
 #define NXT_LED_PIN              		(13)
 
-#ifdef MINDSENSORS_NXT_SERVO_COMPATIBLE
+//#ifdef MINDSENSORS_NXT_SERVO_COMPATIBLE
 #define NUM_SERVOS                              (8)                             // Number of Servos we have control registers for
                                                                                 // Although we don't physically have control of this
                                                                                 // many outputs this makes the registers compatible
                                                                                 // with the Mindsensors NXT Servo Sensor 
-#else
-#define NUM_SERVOS                              (4)                             // Number of Servos we have control registers for
-#endif                                                                                
+//#else
+//#define NUM_SERVOS                            (4)                             // Number of Servos we have control registers for
+//#endif                                                                                
 #define DFLT_SERVO_SPEED                        (50)                            // 50uS pulse width change per frame                                                                                
 
 

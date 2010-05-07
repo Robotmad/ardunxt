@@ -33,11 +33,7 @@
   D09-00 = Value (centre = 512)
   D13-10 = Channel Number
 
- Issues:
-  How to detect/sync with frames (7mS inter frame gap or pattern matching)
 */
-
-//#ifdef _DSM2_RX
 
 #define MAX_NUM_CHANNELS	(7)
 #define DSM2_SERIAL_BAUD	(115200)		   // Baud Rate used for DSM2 satellite receiver	
@@ -311,7 +307,5 @@ void DSM2_Diagnostics(void)
   Serial.print((int)g_u16DSM2Ch[6]);
   Serial.println(".");
 }
-
-//#endif	// _DSM2_RX
 	
 

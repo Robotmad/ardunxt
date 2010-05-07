@@ -24,6 +24,7 @@
 //  set RC Input centre
 //  save config
 //  control Mux
+//  configuration (e.g. GPS or DSM2)
 // Single status byte for NXT to read to say if anything has changed (bitmap of what?)
 
 #include <avr/interrupt.h>
@@ -36,11 +37,16 @@ extern void twi4nxt_attachSlaveRxEvent( void (*)(byte*, uint8_t) );
 extern void twi4nxt_attachSlaveTxEvent( void (*)(void) );
 
 #define TITLE_STRING    "ArduNXT Universal RC Interface"
-#define VERSION_STRING  "V1.07"            // This is NOT the same as the version reported over the NXT interface 
+#define VERSION_STRING  "V1.08"            // This is NOT the same as the version reported over the NXT interface 
                                            // which is defined in NXTI2C.pde
-#define SERIAL_BAUD     (38400)            // Baud Rate used for GPS and Diagnostics
 
-#define NUM_PWMI	(4)                // Number of RCInput (Pulse Width Measurement) Channels 
+// Select the Baud rate you want to use:
+#define SERIAL_BAUD		(115200)		   // Baud Rate used for DSM2 satellite receiver (and diagnostics)	
+//#define SERIAL_BAUD     (38400)            // Baud Rate used for GPS and Diagnostics
+
+
+#define NUM_RCI_CH		(7)				   // Number of RCInput Channels (e.g. direct from DSM2 satellite receiver)
+
 
 //#define ATTINY_IN_USE                    // If you do not hold the ATTiny, on the ArduPilot hardware, in reset then it is in control of the multiplexer
 #define MINDSENSORS_NXT_SERVO_COMPATIBLE   // If you want FULL compatibility with Mindsensors NXT Servo Sensor (I2C address and Servo Position Readback)
@@ -79,6 +85,17 @@ typedef union {
     UINT_8 u8Value;
   };
 } DiagnosticsFlags;
+
+
+// Flags to configure ArduNXT
+typedef union {
+  struct {
+    unsigned bDSM2:1;               // Serial Port used for DSM2 satellite receiver
+  };
+  struct {
+    UINT_8 u8Value;
+  };
+} ConfigurationFlags;
 
 
 // Assorted Flags 
@@ -152,7 +169,7 @@ RCInputFlags;
 
 // Where things are stored in EEPROM
 #define EE_DIAGNOSTICS_FLAGS    (0x01)
-
+#define EE_CONFIGURATION_FLAGS	(0x02)
 
 
 /***************************************************************************
@@ -160,10 +177,12 @@ RCInputFlags;
  **************************************************************************/
 GPSRecord	        		 m_GPSNew;
 GPSMsgFlags	        		 g_GPSMsgFlags;
-volatile RCInputFlags                    g_RCIFlags[NUM_PWMI];
+volatile RCInputFlags                    g_RCIFlags[NUM_RCI_CH];	// RCInput channel flags
 DiagnosticsFlags                         g_DiagnosticsFlags;
+ConfigurationFlags						 g_ConfigurationFlags;	
 volatile MiscFlags                       g_MiscFlags;  
-    
+unsigned int						 g_u16Pulse[NUM_RCI_CH];		// RCInput pulse widths
+
 /***************************************************************************
 
  **************************************************************************/
@@ -182,7 +201,14 @@ void loop()
   ServoOutput_Handler();
   RCInput_Handler();
   Analogue_Handler();
-  GPS_Handler();
+  if(g_ConfigurationFlags.bDSM2)
+  {
+	  DSM2_Handler();
+  }
+  else
+  {
+	  GPS_Handler();
+  }	
   NXT_Handler();
   Multiplexer_Handler();
   
@@ -229,15 +255,24 @@ void Init_ArduNXT(void)
   Load_Settings();//Loading saved settings
   
   // Override saved settings
-  g_DiagnosticsFlags.u8Value = 0xF5;  // Turn on all diagnostics of interest
-  
+  g_DiagnosticsFlags.bRCInput = TRUE;
+  g_ConfigurationFlags.bDSM2 = TRUE;
+
   // Initialise all modules
   Save_Settings();
   Init_Multiplexer();
   Init_RCInputCh();
   Init_ServoOutput();
   Init_NXTIIC();
-  Init_GPS();
+  if(g_ConfigurationFlags.bDSM2)
+  {
+	  Init_DSM2();
+  }
+  else
+  {
+	  // If Serial Port is in use for DSM2 satellite receiver then it can't also do GPS
+	  Init_GPS();
+  }
 
   // Everything initialised - enable interrupts
   sei();
@@ -249,6 +284,7 @@ void Load_Settings(void)
 {
   Serial.println("Load Settings");
   g_DiagnosticsFlags.u8Value =(byte)eeprom_read_byte((const uint8_t *)EE_DIAGNOSTICS_FLAGS); 
+  g_ConfigurationFlags.u8Value =(byte)eeprom_read_byte((const uint8_t *)EE_CONFIGURATION_FLAGS);
 }
 
 void Save_Settings(void)
@@ -256,6 +292,7 @@ void Save_Settings(void)
   Serial.println("Save Settings");
   eeprom_busy_wait(); 
   eeprom_write_byte((uint8_t *)EE_DIAGNOSTICS_FLAGS, g_DiagnosticsFlags.u8Value);
+  eeprom_write_byte((uint8_t *)EE_CONFIGURATION_FLAGS, g_ConfigurationFlags.u8Value);
 }
 
 

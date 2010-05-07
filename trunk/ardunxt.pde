@@ -24,7 +24,7 @@
 //  set RC Input centre
 //  save config
 //  control Mux
-//  configuration (e.g. GPS or DSM2)
+
 // Single status byte for NXT to read to say if anything has changed (bitmap of what?)
 
 #include <avr/interrupt.h>
@@ -132,8 +132,7 @@ typedef union {
 typedef struct
 {
 //	UINT_16			u16Date;		// binary format date encoding	
-	UINT_24			u24Time;		// Seconds since midnight (UTC))
-	UINT_8			u8CentiSeconds;	        // CentiSeconds	
+	UINT_32			u32Time;		// Milliseconds since midnight (UTC)
 	INT_32			i32Latitude;      	// Latitude (min/10000)
 	INT_32			i32Longitude;      	// Longitude (min/10000)
 	UINT_16			u16Altitude;    	// Altitude (m/10)
@@ -207,7 +206,7 @@ void loop()
   }
   else
   {
-	  GPS_Handler();
+  GPS_Handler();
   }	
   NXT_Handler();
   Multiplexer_Handler();
@@ -271,7 +270,7 @@ void Init_ArduNXT(void)
   else
   {
 	  // If Serial Port is in use for DSM2 satellite receiver then it can't also do GPS
-	  Init_GPS();
+  Init_GPS();
   }
 
   // Everything initialised - enable interrupts

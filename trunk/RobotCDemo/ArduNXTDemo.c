@@ -15,12 +15,54 @@
 
 #pragma platform(NXT)
 
-#define FLIP_ANGLE  (90)
+#define MAX_NUM_RCCHANNELS    (4)       // Maximum number of Remote Control Input Channels
 
-// ArduNXT Addresses
-const int kServoRegisterIndex = 0x4B;    // Servo outputs x4
+// ArduNXT Device I2C Address
+#define ARDUNXT_I2C_ADDR      (0xB0)    // When used in Mindsensors NXT Servo Sensor compatibility mode
 
-int FlipState = 0;
+// ArduNXT Address Map
+// ===================
+//
+#define ARDUNXT_VERSION       (0x40)    // ArduNXT version (read only)
+#define ARDUNXT_CMD           (0x41)    // Command register
+
+//
+// Servo Channel Addresses are compatible with Mindsensors NXT Servo Sensor
+//
+// Full resolution position register, can be read and written (value is 2 bytes, 16-bit, pulse width in uS)
+#define ARDUNXT_SERVO_CHAN1   (0x42)    // Servo Channel 1 LSB (MSB is at address+1)
+#define ARDUNXT_SERVO_CHAN2   (0x44)    // Servo Channel 1 LSB
+#define ARDUNXT_SERVO_CHAN3   (0x46)    // Servo Channel 1 LSB
+#define ARDUNXT_SERVO_CHAN4   (0x48)    // Servo Channel 1 LSB
+
+// Quick position register, can only be written (value is single byte pulse width in units of 10uS)
+#define NXTSERVO_QPOS_CHAN1   (0x5A)    // Servo channel 1 quick position
+#define NXTSERVO_QPOS_CHAN2   (0x5B)    // Servo channel 2 quick position
+#define NXTSERVO_QPOS_CHAN3   (0x5C)    // Servo channel 3 quick position
+#define NXTSERVO_QPOS_CHAN4   (0x5D)    // Servo channel 4 quick position
+
+//
+// Remote Control Input Channels, read only (16bit unsigned pulse width in uS)
+//
+#define ARDUNXT_RC_CHAN1      (0x63)    // Remote Control Channel 1 LSB (MSB is at address+1)
+#define ARDUNXT_RC_CHAN2      (0x65)    // Remote Control Channel 2 LSB
+#define ARDUNXT_RC_CHAN3      (0x67)    // Remote Control Channel 3 LSB
+#define ARDUNXT_RC_CHAN4      (0x69)    // Remote Control Channel 4 LSB
+
+//
+// GPS Data Block
+//
+#define ARDUNXT_GPSDATA       (0x70)    // GPS Data Block (start address)
+#define ARDUNXT_GPSSIZE       (0x12)    // Size of the complete data block
+#define ARDUNXT_GPSTIME       (0x70)    // Time in milliseconds (Time of Week)
+#define ARDUNXT_GPSLAT        (0x74)    // Latitude (min/10000)
+#define ARDUNXT_GPSLONG       (0x78)    // Longitude (min/10000)
+#define ARCUNXT_GPSALT        (0x7C)    // Altitude (m/10)
+#define ARDUNXT_GPSSPEED      (0x7E)    // Speed (cm/s)
+#define ARDUNXT_GPSHEAD       (0x80)    // Heading (degrees/100)
+
+
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -34,7 +76,6 @@ int FlipState = 0;
 // have hardware I2C support rather than a bit-banged I2C implementation.
 //
 //////////////////////////////////////////////////////////////////////////////////////////
-
 void initializeI2CSensor(const tSensors nPortIndex, const bool bFastI2C)
 {
   SensorType[nPortIndex] = bFastI2C ? sensorI2CCustomFast : sensorI2CCustom;
@@ -47,7 +88,6 @@ void initializeI2CSensor(const tSensors nPortIndex, const bool bFastI2C)
 // Function will delay waiting for last I2C transaction to finish.
 //
 //////////////////////////////////////////////////////////////////////////////////////////
-
 bool waitForI2CReply(tSensors nPortIndex, const int nReplyLength)
 {
 	while (nI2CStatus[nPortIndex] == STAT_COMM_PENDING)
@@ -63,7 +103,6 @@ bool waitForI2CReply(tSensors nPortIndex, const int nReplyLength)
 //
 // Alternate version showing more complicated error checking
 //
-
 bool checkErrorStatus(tSensors nPortIndex, const int nReplyLength)
 {
 	while (nI2CStatus[nPortIndex] == STAT_COMM_PENDING)
@@ -100,9 +139,7 @@ bool checkErrorStatus(tSensors nPortIndex, const int nReplyLength)
 //
 //                        Send a Message via I2C
 //
-// Sends an arbitrary 4-byte message over an I2C port. It would be easy to modify for
-// messages of different length. Simply adjust the function parameters and the initialization
-// of the 'nMsg' array.
+// Sends an arbitrary 4-byte message over an I2C port.
 //
 // You'll have to poll the status of the I2C communications channel to tell when the
 // I2C transaction is complete.
@@ -110,16 +147,13 @@ bool checkErrorStatus(tSensors nPortIndex, const int nReplyLength)
 // Usually when writing to device the reply length will be zero.
 //
 //////////////////////////////////////////////////////////////////////////////////////////
-
-bool sendI2CMessage(tSensors nPortIndex, byte kRegisterIndex, byte nByte1, byte nByte2, byte nByte3, byte nByte4)
+bool sendI2CMessage(tSensors nPortIndex, const ubyte kRegisterIndex, const ubyte nByte1, const ubyte nByte2, const ubyte nByte3, const ubyte nByte4)
 {
-	const int kI2CAddress    = 0x02;    // You may want to make this a function parameter
-
-	const byte nMsg[] =
+  const ubyte nMsg[] =
 	{
 		2 + 4,               // This is length field for transmitted message.
-		kI2CAddress,         // The I2C address of the device. Almost all devices use value '0x02'
-		kRegisterIndex,      // The internal register index within the sensor to start writing at.
+		ARDUNXT_I2C_ADDR,    // The I2C address of the device.
+		kRegisterIndex,      // The internal register index within the sensor to start writeing at.
 		nByte1,
 		nByte2,
 		nByte3,
@@ -134,10 +168,6 @@ bool sendI2CMessage(tSensors nPortIndex, byte kRegisterIndex, byte nByte1, byte 
 }
 
 
-bool sendArduNXTServo(tSensors nPortIndex, byte nByte1, byte nByte2, byte nByte3, byte nByte4)
-{
-  return(sendI2CMessage(nPortIndex, kServoRegisterIndex, nByte1, nByte2, nByte3, nByte4));
-}
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -178,87 +208,33 @@ bool readSensorReply(tSensors nPortIndex, ubyte &pReplyMsg, const int nReplyLeng
 }
 
 
-#define PWM_CENTRE    (1500)
-#define PWM_THRESHOLD (50)
-#define PWM_RANGE     (4)   // Scale factor to get a range of 100
-
-// Steering -or one channel of tank drive
-// returns a value from +100 to -100
-// with a deadband around 0
-int PWM2Motor(int nPWM)
-{
-  if (abs(nPWM - PWM_CENTRE) < PWM_THRESHOLD)
-  {
-    return (0); // No turn
-  }
-  else
-  {
-    return (((nPWM - PWM_CENTRE) / PWM_RANGE));
-  }
-}
-
-// Throttle
-int PWM2Power(int nPWM)
-{
-  if (abs(nPWM - PWM_CENTRE) < PWM_THRESHOLD)
-  {
-    return (0);
-  }
-  else
-  {
-    return (((nPWM - PWM_CENTRE)) / PWM_RANGE);
-  }
-}
-
-
-int ubyte2int(ubyte uVal)
-{
-  int iValue = uVal;
-
-  if (uVal >= 128)
-  {
-    // Values >= 128 are negative (2s complement values)
-    iValue -= 256;
-  }
-  return (iValue);
-}
-
-
-
 ////////////////////////////////////////////////////////////////////////////////////////////
 //
-//          Sample Task to Continuously read the sensor characteristics
+//          Read GPS Data Block from ArduNXT
 //
 ////////////////////////////////////////////////////////////////////////////////////////////
+static ubyte nGPSReply[ARDUNXT_GPSSIZE];
 
-void ReadGPS()
+void ArduNXTReadGPS(tSensors nPortIndex)
 {
-	const int kI2CAddress    = 0xB0;    // You may want to make this a function parameter
-	const int kRegisterIndex = 0x6F;    // You may want to make this a function parameter
-
-	unsigned long u24Time = 0;
-  unsigned char Servo2 = 0;
-  unsigned char Servo3 = 0;
-  unsigned char Servo4 = 0;
-
-	static const ubyte nReadRegisters[] =
+	static const ubyte nMsg[] =
 	{
 		2,                   // This is length field for transmitted message.
-		kI2CAddress,         // The I2C address of the device. Almost all devices use value '0x02'
-		kRegisterIndex,      // The internal register index within the sensor to start writing at.
+		ARDUNXT_I2C_ADDR,    // The I2C address of the device.
+		ARDUNXT_GPSDATA      // The internal register index within the sensor to start reading from
 	};
 
-	const int kReplyLength = 5;
-	ubyte nReply[kReplyLength];
+	const int kReplyLength = ARDUNXT_GPSSIZE;
+//ubyte nGPSReply[kReplyLength];
 
-  while (!sendSensorRead(S1, nReadRegisters, kReplyLength))
+  while (!sendSensorRead(nPortIndex, nMsg, kReplyLength))
   {
     // wait until we can send the request to read data
   }
 
   int nReadTime = nSysTime;
 
-  while (!readSensorReply(S1, (ubyte *)nReply, kReplyLength))
+  while (!readSensorReply(nPortIndex, (ubyte *)nGPSReply, kReplyLength))
   {
     // wait for reply to arrive
     if ((nSysTime - nReadTime) > 100)
@@ -266,166 +242,145 @@ void ReadGPS()
       // if we haven't got a reply after 100mS then we are not going to get one.
       break;
     }
+    wait1Msec(1);
   }
 
   // Signed values
-  nxtDisplayTextLine(3, "Time: %d %d", nReply[0], nReply[4]);
+  {
+    long lTime;
+    lTime = nGPSReply[0] | (nGPSReply[1]<<8) | (nGPSReply[2]<<16) | (nGPSReply[3]<<24);
+
+    nxtDisplayTextLine(3, "T:%ldmS", lTime);
+  }
 }
 
 
-void flip()
+/**
+ * Get the Remote Control Channel values.
+ * @param link the ArduNXT port number
+ * @param pu16RCValues array into which the Remote Control Input pulse widths are to be written
+ * @param numChannels the number of Remote Control Input Channels to read
+ */
+bool ArduNXTReadRemoteControl(tSensors link, int &pu16RCValues, ubyte numChannels)
 {
-  nxtDisplayTextLine(3, "Flip");
+	static const ubyte nMsg[] =
+	{
+		2,                   // This is length field for transmitted message.
+		ARDUNXT_I2C_ADDR,    // The I2C address of the device.
+		ARDUNXT_RC_CHAN1     // The internal register index within the sensor to start reading from
+	};
 
-  //nMotorEncoder[Flipper] = 0;  //clear the LEGO motor encoders
+  int nReadTime = nSysTime;
 
-  nMotorEncoderTarget[Flipper] = FLIP_ANGLE; //set the target stoping position
-
-  motor[Flipper] = 100; //turn both motors on at 30 percent power
-
-  while (nMotorRunState[Flipper] != runStateIdle) //while the encoder wheel turns
+  if (numChannels > MAX_NUM_RCCHANNELS)
   {
-    // This condition waits for motor to come to an idle position.
-    // and then jumps out of the loop
+    // Request to read too many channels
+    return false;
   }
 
-  motor[Flipper] = 0; //turn motor off
-
-  FlipState = TRUE;
-  nxtDisplayTextLine(3, "Flipped");
-
-//wait1Msec(3000);  // wait 3 seconds to see feedback on the debugger screens
-                    // open the "NXT Devices" window to see the distance the encoder spins.
-                    // the robot will come to a stop at the nMotorEncoderTarget position.
-}
-
-void flop()
-{
-  nxtDisplayTextLine(3, "Flop");
-
-//nMotorEncoder[Flipper] = 0;  //clear the LEGO motor encoders
-
-  nMotorEncoderTarget[Flipper] = FLIP_ANGLE; //set the target stoping position
-
-  motor[Flipper] = -50; //turn both motors on at 30 percent power
-
-  while (nMotorRunState[Flipper] != runStateIdle) //while the encoder wheel turns
+  while (!sendSensorRead(link, nMsg, numChannels<<1))
   {
-    // This condition waits for motor to come to an idle position.
-    // and then jumps out of the loop
+    // wait until we can send the request to read data
+    if ((nSysTime - nReadTime) > 100)
+    {
+      // if we haven't been able to send after 100mS then we are not going to.
+      return false;
+    }
+    wait1Msec(1);
   }
 
-  motor[Flipper] = 0; //turn motor off
-
-  FlipState = false;
-  nxtDisplayTextLine(3, "Flopped");
-
-//wait1Msec(3000);  // wait 3 seconds to see feedback on the debugger screens
-                    // open the "NXT Devices" window to see the distance the encoder spins.
-                    // the robot will come to a stop at the nMotorEncoderTarget position.
+  nReadTime = nSysTime;
+  while (!readSensorReply(link, (ubyte *)pu16RCValues, numChannels<<1))
+  {
+    // wait for reply to arrive
+    if ((nSysTime - nReadTime) > 100)
+    {
+      // if we haven't got a reply after 100mS then we are not going to get one.
+      return false;
+    }
+    wait1Msec(1);
+  }
+  return true;
 }
+
+
+// Send 4 Servo Positions using the Quick Registers with units of 10uS
+// For other Servo control functionality please see NXTServo-driver.h
+bool ArduNXTSendServo(tSensors nPortIndex, ubyte nByte1, ubyte nByte2, ubyte nByte3, ubyte nByte4)
+{
+  int nReadTime = nSysTime;
+
+  while (!sendI2CMessage(nPortIndex, NXTSERVO_QPOS_CHAN1, nByte1, nByte2, nByte3, nByte4))
+  {
+    // wait until we can send the data
+    if ((nSysTime - nReadTime) > 100)
+    {
+      // if we haven't been able to send after 100mS then we are not going to.
+      return false;
+    }
+    wait1Msec(1);
+  }
+  return true;
+}
+
+
+
+
 
 task main()
 {
-	const int kI2CAddress    = 0xB0;    // You may want to make this a function parameter
-	const int kRegisterIndex = 0x63;    // You may want to make this a function parameter
+	int    u16RC[4];                       // 4 Remote Control Input Channels
+  ubyte  u8Servo[4];
 
-	unsigned char Servo1 = 0;
-  unsigned char Servo2 = 0;
-  unsigned char Servo3 = 0;
-  unsigned char Servo4 = 0;
+  // Initialisation
+  u8Servo[0] = 150;
+  u8Servo[1] = 150;
+  u8Servo[2] = 150;
+  u8Servo[3] = 150;
 
-	static const ubyte nReadRegisters[] =
-	{
-		2,                   // This is length field for transmitted message.
-		kI2CAddress,         // The I2C address of the device. Almost all devices use value '0x02'
-		kRegisterIndex,      // The internal register index within the sensor to start writing at.
-	};
-
-	const int kReplyLength = 4;         // You might want to make this a function parameter.
-	int nReply[kReplyLength];
-
-	int Direction = 0;
   initializeI2CSensor(ArduNXT, true);
+  ArduNXTSendServo(ArduNXT, u8Servo[0], u8Servo[1], u8Servo[2], u8Servo[3]);
+  nxtDisplayBigTextLine(0, "ArduNXT");
 
-  nMotorEncoder[Flipper] = 0;  //clear the LEGO motor encoders
-
-  //nSyncedMotors = synchBC; //motor B is the master, motor C is the slave
-  nPidUpdateInterval = 10;  // ms
-
+  // Monitoring Loop
   while (true)
   {
-    // Update Servo positions
-//  sendI2CMessage(ArduNXT, 0, Servo1++, Servo2--, Servo3++, Servo4--);
-
-    nxtDisplayBigTextLine(0, "ArduNXT: %d", (int)Servo1);
-
-    // TODO add timeout/retry mechanism
-    while (!sendSensorRead(S1, nReadRegisters[0], kReplyLength<<1))
+    // Read Remote Control Inputs
+    if (ArduNXTReadRemoteControl(ArduNXT, u16RC,  4))
     {
-      // wait until we can send the request to read data
-    }
-
-    int nReadTime = nSysTime;
-
-    while (!readSensorReply(S1, (ubyte *)nReply[0], kReplyLength<<1))
-    {
-      // wait for reply to arrive
-      if ((nSysTime - nReadTime) > 100)
-      {
-        // if we haven't got a reply after 100mS then we are not going to get one.
-        break;
-      }
-    }
-
-    // Signed values
-    nxtDisplayTextLine(4, "Ch 0: %d", nReply[0]);
-    nxtDisplayTextLine(5, "Ch 1: %d", nReply[1]);
-    nxtDisplayTextLine(6, "Ch 2: %d", nReply[2]);
-    nxtDisplayTextLine(7, "Ch 3: %d", nReply[3]);
-
-    // Control the drive from the Radio Control
-    nPidUpdateInterval
-    if (0 <= PWM2Motor(nReply[1]))
-    {
-      if (Direction != 1)
-      {
-        motor[motorC] = 0;
-        nSyncedMotors = synchBC; //motor B is the master, motor C is the slave
-        Direction = 1;
-      }
-      nMotorEncoder[motorB] = 0; //reset the value of motorB's encoder to zero
-      int Steering = 100 - 2 * PWM2Motor(nReply[1]); //motors move at % alignment to each other
-      nSyncedTurnRatio  = Steering;
-      motor[motorB] = PWM2Power(nReply[2]);
+      // Display the values
+       nxtDisplayTextLine(4, "Ch 0:%4d uS", u16RC[0]);
+       nxtDisplayTextLine(5, "Ch 1:%4d uS", u16RC[1]);
+       nxtDisplayTextLine(6, "Ch 2:%4d uS", u16RC[2]);
+       nxtDisplayTextLine(7, "Ch 3:%4d uS", u16RC[3]);
     }
     else
     {
-      if (Direction != -1)
-      {
-        motor[motorB] = 0;
-        nSyncedMotors = synchCB;
-        Direction = -1;
-      }
-      nMotorEncoder[motorC] = 0; //reset the value of motorC's encoder to zero
-      int Steering = 100 + 2 * PWM2Motor(nReply[1]); //motors move at % alignment to each other
-      nSyncedTurnRatio  = Steering;
-      motor[motorC] = PWM2Power(nReply[2]);
+       nxtDisplayTextLine(4, "No Response!!!");
+       nxtDisplayTextLine(5, "No Response!!!");
+       nxtDisplayTextLine(6, "No Response!!!");
+       nxtDisplayTextLine(7, "No Response!!!");
     }
 
+    // Control Servo Outputs (based on the RC Inputs)
+    // Reversed - so that you can tell the difference between direct RC control and ArduNXT control
+    if (u16RC[0])    u8Servo[0] = 400-(u16RC[0]/10);
+    if (u16RC[1])    u8Servo[1] = 400-(u16RC[1]/10);
+    if (u16RC[2])    u8Servo[2] = 400-(u16RC[2]/10);
+    if (u16RC[3])    u8Servo[3] = 400-(u16RC[3]/10);
 
-    if (nReply[3] > 1600)
+    if (ArduNXTSendServo(ArduNXT, u8Servo[0], u8Servo[1], u8Servo[2], u8Servo[3]))
     {
-      // Raise Flipper
-      if (!FlipState) flip();
+      nxtDisplayTextLine(2, "Servo 0:%3d0 uS", u8Servo[0]);
     }
-    else if (FlipState)
+    else
     {
-      flop();
+      nxtDisplayTextLine(2, "No Response!!!");
     }
 
-    // ReadGPS();
+    // Read the GPS Data
+    ArduNXTReadGPS(ArduNXT);
 
-    wait1Msec(100);
+    wait1Msec(10);
   }
 }

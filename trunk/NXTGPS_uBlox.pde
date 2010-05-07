@@ -436,11 +436,12 @@ bool GPS_DecodePOSLLHMessage(void)
     byte       *m_pcField;
     INT_32	i32Temp;
 		
-    // Time
+    // Time (milliseconds)
     m_pcField = &m_pGPS[UBX_POSLLH_TOW_INDX];
     i32Temp = *((UINT_32 *)m_pcField);	// mS (iTOW)
-    m_GPSNew.u24Time = i32Temp / 1000;	// Seconds
-    m_GPSNew.u8CentiSeconds = (i32Temp - ((UINT_32)m_GPSNew.u24Time * 1000)) / 10;
+    m_GPSNew.u32Time = i32Temp;
+    //m_GPSNew.u32Time = i32Temp / 1000;	// Seconds
+    // m_GPSNew.u8CentiSeconds = (i32Temp - ((UINT_32)m_GPSNew.u24Time * 1000)) / 10;
 
     // Longitude (10,000th Minutes)
     m_pcField = &m_pGPS[UBX_POSLLH_LON_INDX];
@@ -511,10 +512,10 @@ void GPS_Diagnostics(void)
   // Diagnostics for GPS    
   // Time
 //  Serial.print("TOW: ");
-  Serial.print(m_GPSNew.u24Time);
-  Serial.print(".");
-  Serial.print((int)m_GPSNew.u8CentiSeconds);
-  Serial.print("S, ");
+  Serial.print(m_GPSNew.u32Time);
+//  Serial.print(".");
+//  Serial.print((int)m_GPSNew.u8CentiSeconds);
+  Serial.print("mS, ");
   // Longitude (10,000th Minutes)
 //  Serial.print("Lon: ");
   Serial.print(m_GPSNew.i32Longitude);

@@ -83,7 +83,7 @@ void Init_GPS(void)
   GPS_timer = 0U;
   g_GPSMsgFlags.u8Value = 0U;
 
-  // Initialise NXT status LED output pin
+  // Initialise GPS status LED output pin
 #if defined(GPS_LED_PIN)
   pinMode(GPS_LED_PIN, OUTPUT);				// LED pin configured as an output
 #endif

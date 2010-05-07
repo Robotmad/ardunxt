@@ -9,7 +9,11 @@
 #define DFLT_PWMI_CENTRE        (1500)                                  // uS Default center pulse width
 #define PWM_PERIOD		(40000)                                 // PWM Output period (MUST be in sync with value used to set up T1)
 
-//#define NUM_PWMI	        (4)                                     // Number of RCINput (Pulse Width Measurement) Channels 
+#define NUM_PWMI	        (4)                                     // Number of RCInput (Pulse Width Measurement) Channels 
+
+#if (NUM_RCI_CH < NUM_PWMI)
+#error 'Error there must be at least as many RCI Channels as PWMI Channels'
+#endif
 
 // We have no choice of which pins are used for input channels 0 & 1 they must be PD2, PD3 (Arduino Digital inputs 2 and 3)
 // We do however have some choice over the extra channels - but please be careful as they must be on different ports
@@ -46,8 +50,8 @@ RCInputFlags;
 //volatile RCInputflags                                  g_RCIFlags[NUM_PWMI];
 volatile unsigned int					 g_u16PRise[NUM_PWMI];
 volatile unsigned int					 g_u16PFall[NUM_PWMI];
-unsigned int						 g_u16Pulse[NUM_PWMI];
-unsigned int                                             g_u16Centre[NUM_PWMI]; 
+//unsigned int						 g_u16Pulse[NUM_PWMI];
+unsigned int                                             g_u16Centre[NUM_RCI_CH]; 
 unsigned int                                             m_u16ValidFrames; 
 
 
@@ -84,7 +88,7 @@ void Init_RCInputCh(void)
 
   Init_RCInputPCIISR();
 
-  for (int i=0; i < NUM_PWMI; i++)
+  for (int i=0; i < NUM_RCI_CH; i++)
   {  
     g_u16Centre[i] = DFLT_PWMI_CENTRE;    // TODO read from EEPROM
     g_RCIFlags[i].u8Value = 0U;         
@@ -125,7 +129,7 @@ void RCInput_SetCentre(void)
 {
   unsigned char u8Ch;
 
-  for (u8Ch = 0; u8Ch < NUM_PWMI; u8Ch++)
+  for (u8Ch = 0; u8Ch < NUM_RCI_CH; u8Ch++)
   {
     RCInput_SetCentre(u8Ch);
   }
@@ -355,6 +359,17 @@ void RCInput_Handler(void)
   static  unsigned int u16PFall;
   static  unsigned int u16PRise;
   byte	               i;
+
+  if (g_DSM2MsgFlags.bPresent)
+  {
+	  // DSM2 satellite receiver in use for Remote Control
+	  if (g_DSM2MsgFlags.bUpdate)
+	  {
+			m_u16ValidFrames++;
+	  		g_DSM2MsgFlags.bUpdate = FALSE;
+	  }
+	  return;
+  }
 
   // Loop over outstanding active channels 
   for (i = 0U; i < NUM_PWMI; i++)

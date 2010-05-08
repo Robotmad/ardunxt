@@ -16,8 +16,8 @@
 #define DFLT_PULSE_WIDTH        (1500U)  // uS
 #define MAX_PULSE_WIDTH         (2500U)  // uS    
 
-#define NUM_SERVO_CH            (4U)      // total number of servo output channels
-#define NUM_HW_SERVO_CH         (2U)      // 2 hardware servo output channels
+//#define NUM_SERVO_CH			(4U)		// total number of servo output channels
+#define NUM_HW_SERVO_CH			(2U)		// 2 hardware servo output channels
 
 // First two servo channels have hardware support on PB1 and PB2
 // 0 = PB1 = Arduino D9

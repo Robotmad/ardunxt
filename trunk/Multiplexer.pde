@@ -8,6 +8,12 @@
 // directly ourselves by using pin 4 as an output. (To test on the ardupilot hardware connect JP6 pin 5 to pin 6 to hold the ATTiny in reset
 // so that we can drive the TMISO multiplexer control signal directly.)
 
+//
+// If a DSM2 Satellite Receiver is being used for Remote Control then there are no PWM signals from the receiver
+// for the hardware multiplexer to pass on to the servos - so we must use a software multiplexer
+//
+
+//
 // Hardware defines
 #define MULTIPLEXER_CTRL_PIN    (4)
 #define MUX_ATMEGA_CONTROL      (1)          // High signal to/from multiplexer for ATMEGA control of Servo Output
@@ -19,6 +25,7 @@
 
 // RC Input Channel and threshold for switching
 #define MUX_CTRL_CHANNEL        (3)          // RC Input channel used to control multiplexer
+#define MUX_CTRL_DSM2_CHANNEL	(4)			 // DSM2 Receiver Input Channel used to control (software) multiplexer	
 #define MUX_PULSEWIDTH_THRESH   (1350)       // uS 
 #define NUM_VALID_FRAMES_REQ    (50)
 
@@ -27,7 +34,7 @@
 #define MODE_RADIO              (0)          // Radio in control
 #define MODE_ATMEGA             (1)          // ATMEGA in control
 #define MODE_FAILSAFE           (2)          // No Radio signal - failsafe
-
+#define MODE_SWRADIO			(3)			 // Software multiplexer (for DSM2 Satellite Receiver)
 
 // Variables
 byte                             m_u8CurrentMode;  //Current Multiplexer Mode
@@ -84,67 +91,99 @@ void Multiplexer_Handler(void)
   }
 
 #else
-  if (NUM_VALID_FRAMES_REQ < RCInput_ValidFrames())
-  {
     // Input pulse width is already checked for validity
-    if (MUX_PULSEWIDTH_THRESH > RCInput_RawCh(MUX_CTRL_CHANNEL))
-    {
-      u8Mode = MODE_RADIO;
-    }
-    else
-    {
-      // Long pulse width
-      u8Mode = MODE_ATMEGA;
-    }
-  }
-  else
-  {
-    // RC signal isn't valid - failsafe
-    u8Mode = MODE_FAILSAFE;
-  }
+	if (g_DSM2MsgFlags.bPresent)
+	{
+		if (MUX_PULSEWIDTH_THRESH > RCInput_RawCh(MUX_CTRL_DSM2_CHANNEL))
+		{
+			u8Mode = MODE_SWRADIO;
+		}
+		else
+		{
+			// Long pulse width
+			u8Mode = MODE_ATMEGA;
+		}
+	}
+	else if (NUM_VALID_FRAMES_REQ < RCInput_ValidFrames())
+	{
+	    if (MUX_PULSEWIDTH_THRESH > RCInput_RawCh(MUX_CTRL_CHANNEL))
+		{
+			u8Mode = MODE_RADIO;
+		}
+        else
+		{
+			// Long pulse width
+			u8Mode = MODE_ATMEGA;
+		}
+	}
+	else
+	{
+		// RC signal isn't valid - failsafe
+		u8Mode = MODE_FAILSAFE;
+	}
 
-  if (u8Mode != u8NewMode)
-  {
-    // Reset timer for Mode selection stability
-    m_u32LastChangeTime = millis();    
-    u8NewMode = u8Mode;
-  }
+	if (u8Mode != u8NewMode)
+	{
+		// Reset timer for Mode selection stability
+		m_u32LastChangeTime = millis();    
+		u8NewMode = u8Mode;
+	}
   
-  if (u8Mode != m_u8CurrentMode)
-  {  
-    // Manage transition between states to avoid spurious pulses
-    // Enforce a period of stability?
-    // TODO - wait for all RCInputs to be low
-    // Force restart of PWM output?
-    switch (u8Mode)
-    {
-    case MODE_RADIO:
-      // Allow instant switch to Radio Control
-      digitalWrite(MULTIPLEXER_CTRL_PIN, MUX_RADIO_CONTROL);  // Drive Multiplexer control signal  
-      m_u8CurrentMode = MODE_RADIO;
-      if (g_DiagnosticsFlags.bMultiplexer)Serial.println("Mode: Radio");
-      break;
-      
-    case MODE_ATMEGA:
-      if (100 < (millis() - m_u32LastChangeTime))
-      {
-        digitalWrite(MULTIPLEXER_CTRL_PIN, MUX_ATMEGA_CONTROL);  // Drive Multiplexer control signal         
-        m_u8CurrentMode = MODE_ATMEGA;
-        if (g_DiagnosticsFlags.bMultiplexer)Serial.println("Mode: ArduNXT");
-      }
-      break;
-      
-    case MODE_FAILSAFE:
-      if (1500 < (millis() - m_u32LastChangeTime))
-      {
-        // Don't switch to failsafe too quickly - i.e. allow time to recover from individual invalid RC pulses
-        digitalWrite(MULTIPLEXER_CTRL_PIN, FAILSAFE_MUX_CTRL);  // Drive Multiplexer control signal         
-        m_u8CurrentMode = MODE_FAILSAFE;
-        if (g_DiagnosticsFlags.bMultiplexer)Serial.println("Mode: Failsafe");        
-      }
-      break;
-    }
-  }
+	if (u8Mode != m_u8CurrentMode)
+	{  
+		// Manage transition between states to avoid spurious pulses
+		// Enforce a period of stability?
+		// TODO - wait for all RCInputs to be low
+		// Force restart of PWM output?
+		switch (u8Mode)
+		{
+		case MODE_SWRADIO:
+			// Software Multiplexer
+			// There is no point switching the hardware multiplexer over as the Receiver is NOT connected to the PWM inputs
+			// instead we need to implement a software multiplexer
+			digitalWrite(MULTIPLEXER_CTRL_PIN, MUX_ATMEGA_CONTROL);  // Drive Multiplexer control signal
+			m_u8CurrentMode = MODE_SWRADIO;
+			if (g_DiagnosticsFlags.bMultiplexer)Serial.println("Mode: SWRadio");
+			break;
+
+		case MODE_RADIO:
+			// Allow instant switch to Radio Control
+			digitalWrite(MULTIPLEXER_CTRL_PIN, MUX_RADIO_CONTROL);  // Drive Multiplexer control signal  
+			m_u8CurrentMode = MODE_RADIO;
+			if (g_DiagnosticsFlags.bMultiplexer)Serial.println("Mode: Radio");
+			break;
+	      
+		case MODE_ATMEGA:
+		  if (100 < (millis() - m_u32LastChangeTime))
+		  {
+			digitalWrite(MULTIPLEXER_CTRL_PIN, MUX_ATMEGA_CONTROL);  // Drive Multiplexer control signal         
+			m_u8CurrentMode = MODE_ATMEGA;
+			if (g_DiagnosticsFlags.bMultiplexer)Serial.println("Mode: ArduNXT");
+		  }
+		  break;
+	      
+		case MODE_FAILSAFE:
+		  if (1500 < (millis() - m_u32LastChangeTime))
+		  {
+			// Don't switch to failsafe too quickly - i.e. allow time to recover from individual invalid RC pulses
+			digitalWrite(MULTIPLEXER_CTRL_PIN, FAILSAFE_MUX_CTRL);  // Drive Multiplexer control signal         
+			m_u8CurrentMode = MODE_FAILSAFE;
+			if (g_DiagnosticsFlags.bMultiplexer)Serial.println("Mode: Failsafe");        
+		  }
+		  break;
+		}
+	}
+
+	if (m_u8CurrentMode == MODE_SWRADIO)
+	{
+		// Software Multiplexer - because the DSM2 Satellite Receiver does not provide PWM signals to the hardware multiplexer
+		// we need to drive the servo output directly from the received frame data
+		for (byte i = 0; i < NUM_SERVO_CH; i++)
+		{
+			ServoOutput(i, RCInput_RawCh(i));
+		}
+	}
+
 #endif
 }
 

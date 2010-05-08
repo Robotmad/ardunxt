@@ -51,7 +51,7 @@
 
 // Define the maximum allowed time between receiving valid frames for the LED to remain on
 #define DSM2_LED_TIMEOUT                        (40)	 // milli seconds
-#define DSM2_LED_FLASH_PERIOD                   (500)   // milli seconds flash period when searching 
+#define DSM2_LED_FLASH_PERIOD                   (500)    // milli seconds flash period when searching 
 
 //---------------------------------------------------------------------
 // Macro Definitions
@@ -134,7 +134,7 @@ void DSM2_Handler(void)
   {
     m_u8RxByte = Serial.read();    
     
-	// Serial.write(m_u8RxByte);
+//	Serial.write(m_u8RxByte);
 
     switch (m_u8RxState)
     {
@@ -226,6 +226,10 @@ void DSM2_Handler(void)
   }
 }
 
+
+#define DSM2_CENTRE	(512)		// A value of 512 represents the central stick position
+#define DSM2_SCALE	(25)		// Scale factor x10 (so that we can stick to integer maths)	
+
 // Decode frame pointed to by m_pDSM2;
 bool DSM2_Decode(void)
 {
@@ -233,13 +237,13 @@ bool DSM2_Decode(void)
 	byte u8Channel;
 	byte i;
 
-	// Serial.print("D");  
+//	Serial.print("D");  
 	
 	for (i = 0; i < MAX_NUM_CHANNELS; i++)
 	{
 		u8Byte = *m_pDSM2++;
 	    u8Channel = u8Byte >> 2;
-		// Serial.print((int)u8Channel);
+//		Serial.print((int)u8Channel);
 		if (u8Channel < MAX_NUM_CHANNELS)
 	    {
 			// Valid channel number
@@ -248,7 +252,7 @@ bool DSM2_Decode(void)
 		else
 		{
 			// Channel number error
-			// Serial.print("E");  
+			Serial.print("E");  
 			return (FALSE);
 		}
 	}
@@ -263,9 +267,21 @@ bool DSM2_Decode(void)
 		// Convert received values to pulse widths
         for (i = 0U; i < NUM_RCI_CH; i++)
 	    {
-			g_u16Pulse[i] = 3 * g_u16DSM2Ch[i];		// (160 - 500 - 850 ish values received)
-            g_RCIFlags[i].bValid = TRUE;
-            g_RCIFlags[i].bUpdate = TRUE;           
+			if (g_u16DSM2Ch[i])
+			{
+				// (160 - 500 - 850 ish values received)
+				// Convert into pulse width in uS for use as if it had been measured from PWM
+				g_u16Pulse[i] = 1500 + (DSM2_SCALE * ((int)g_u16DSM2Ch[i] - DSM2_CENTRE)/10);
+				g_RCIFlags[i].bValid = TRUE;
+				g_RCIFlags[i].bUpdate = TRUE;
+			}
+			else if (g_u16Pulse[i])
+			{
+				// This channel is unused/off
+				g_u16Pulse[i] = 0;
+				g_RCIFlags[i].bValid = FALSE;
+				g_RCIFlags[i].bUpdate = TRUE;
+			}
 		}
 		// Mark all components as false so that we do not recognise another update until all have been refreshed
 		g_DSM2MsgFlags.bValid = FALSE;

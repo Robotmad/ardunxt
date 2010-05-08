@@ -353,6 +353,7 @@ ISR(PCINT2_vect)
 
 
 // TODO add timeout for no signal (configuration fow what to do in this case - return NO_VALUE, last know, center?
+// certainly need to set m_u16ValidFrames = 0
 void RCInput_Handler(void)
 {
   static  unsigned int u16Pulse;    // Static as that usually gives faster code

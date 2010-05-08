@@ -45,10 +45,11 @@ extern void twi4nxt_attachSlaveTxEvent( void (*)(void) );
 //#define SERIAL_BAUD     (38400)            // Baud Rate used for GPS and Diagnostics
 
 
-#define NUM_RCI_CH		(7)				   // Number of RCInput Channels (e.g. direct from DSM2 satellite receiver)
+#define NUM_RCI_CH			(7U)			// Number of RCInput Channels (e.g. direct from DSM2 satellite receiver)
+#define NUM_SERVO_CH		(4U)			// total number of servo output channels
 
 
-//#define ATTINY_IN_USE                    // If you do not hold the ATTiny, on the ArduPilot hardware, in reset then it is in control of the multiplexer
+//#define ATTINY_IN_USE                    // If you do not hold the ATTiny in reset, on the Ardupilot prototype, then it is in control of the multiplexer
 #define MINDSENSORS_NXT_SERVO_COMPATIBLE   // If you want FULL compatibility with Mindsensors NXT Servo Sensor (I2C address and Servo Position Readback)
 
 
@@ -90,7 +91,7 @@ typedef union {
 // Flags to configure ArduNXT
 typedef union {
   struct {
-    unsigned bDSM2:1;               // Serial Port used for DSM2 satellite receiver
+    unsigned bDSM2Enable:1;               // Serial Port used for DSM2 satellite receiver
   };
   struct {
     UINT_8 u8Value;
@@ -174,13 +175,13 @@ RCInputFlags;
 /***************************************************************************
  General variables
  **************************************************************************/
-GPSRecord	        		 m_GPSNew;
-GPSMsgFlags	        		 g_GPSMsgFlags;
-volatile RCInputFlags                    g_RCIFlags[NUM_RCI_CH];	// RCInput channel flags
-DiagnosticsFlags                         g_DiagnosticsFlags;
-ConfigurationFlags						 g_ConfigurationFlags;	
-volatile MiscFlags                       g_MiscFlags;  
-unsigned int						 g_u16Pulse[NUM_RCI_CH];		// RCInput pulse widths
+GPSRecord						 m_GPSNew;
+GPSMsgFlags	        			 g_GPSMsgFlags;
+volatile RCInputFlags            g_RCIFlags[NUM_RCI_CH];	// RCInput channel flags
+DiagnosticsFlags                 g_DiagnosticsFlags;
+ConfigurationFlags				 g_ConfigurationFlags;	
+volatile MiscFlags               g_MiscFlags;  
+unsigned int					 g_u16Pulse[NUM_RCI_CH];		// RCInput pulse widths
 
 /***************************************************************************
 
@@ -200,7 +201,7 @@ void loop()
   ServoOutput_Handler();
   RCInput_Handler();
   Analogue_Handler();
-  if(g_ConfigurationFlags.bDSM2)
+  if(g_ConfigurationFlags.bDSM2Enable)
   {
 	  DSM2_Handler();
   }
@@ -255,7 +256,7 @@ void Init_ArduNXT(void)
   
   // Override saved settings
   g_DiagnosticsFlags.bRCInput = TRUE;
-  g_ConfigurationFlags.bDSM2 = TRUE;
+  g_ConfigurationFlags.bDSM2Enable = TRUE;
 
   // Initialise all modules
   Save_Settings();
@@ -263,7 +264,7 @@ void Init_ArduNXT(void)
   Init_RCInputCh();
   Init_ServoOutput();
   Init_NXTIIC();
-  if(g_ConfigurationFlags.bDSM2)
+  if(g_ConfigurationFlags.bDSM2Enable)
   {
 	  Init_DSM2();
   }

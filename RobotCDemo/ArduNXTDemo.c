@@ -15,7 +15,7 @@
 
 #pragma platform(NXT)
 
-#define MAX_NUM_RCCHANNELS    (4)       // Maximum number of Remote Control Input Channels
+#define MAX_NUM_RCCHANNELS    (7)       // Maximum number of Remote Control Input Channels
 
 // ArduNXT Device I2C Address
 #define ARDUNXT_I2C_ADDR      (0xB0)    // When used in Mindsensors NXT Servo Sensor compatibility mode
@@ -23,7 +23,7 @@
 // ArduNXT Address Map
 // ===================
 //
-#define ARDUNXT_VERSION       (0x40)    // ArduNXT version (read only)
+#define ARDUNXT_CONFIG        (0x40)    // Configuration register
 #define ARDUNXT_CMD           (0x41)    // Command register
 
 //
@@ -36,33 +36,54 @@
 #define ARDUNXT_SERVO_CHAN4   (0x48)    // Servo Channel 1 LSB
 
 // Quick position register, can only be written (value is single byte pulse width in units of 10uS)
-#define NXTSERVO_QPOS_CHAN1   (0x5A)    // Servo channel 1 quick position
-#define NXTSERVO_QPOS_CHAN2   (0x5B)    // Servo channel 2 quick position
-#define NXTSERVO_QPOS_CHAN3   (0x5C)    // Servo channel 3 quick position
-#define NXTSERVO_QPOS_CHAN4   (0x5D)    // Servo channel 4 quick position
+#define ARDUNXT_QPOS_CHAN1    (0x5A)    // Servo channel 1 quick position
+#define ARDUNXT_QPOS_CHAN2    (0x5B)    // Servo channel 2 quick position
+#define ARDUNXT_QPOS_CHAN3    (0x5C)    // Servo channel 3 quick position
+#define ARDUNXT_QPOS_CHAN4    (0x5D)    // Servo channel 4 quick position
+
 
 //
 // Remote Control Input Channels, read only (16bit unsigned pulse width in uS)
 //
-#define ARDUNXT_RC_CHAN1      (0x63)    // Remote Control Channel 1 LSB (MSB is at address+1)
-#define ARDUNXT_RC_CHAN2      (0x65)    // Remote Control Channel 2 LSB
-#define ARDUNXT_RC_CHAN3      (0x67)    // Remote Control Channel 3 LSB
-#define ARDUNXT_RC_CHAN4      (0x69)    // Remote Control Channel 4 LSB
+#define ARDUNXT_RC_CHAN1      (0x62)    // Remote Control Channel 1 LSB (MSB is at address+1)
+#define ARDUNXT_RC_CHAN2      (0x64)    // Remote Control Channel 2 LSB
+#define ARDUNXT_RC_CHAN3      (0x66)    // Remote Control Channel 3 LSB
+#define ARDUNXT_RC_CHAN4      (0x68)    // Remote Control Channel 4 LSB
+#define ARDUNXT_RC_CHAN5      (0x6A)    // Remote Control Channel 5 LSB
+#define ARDUNXT_RC_CHAN6      (0x6C)    // Remote Control Channel 6 LSB
+#define ARDUNXT_RC_CHAN7      (0x6E)    // Remote Control Channel 7 LSB
+
+
+//
+// Remote Control Input Channels, read only (8bit signed position)
+//
+#define ARDUNXT_RCPOS_CHAN1   (0x70)    // Remote Control Channel 1
+#define ARDUNXT_RCPOS_CHAN2   (0x71)    // Remote Control Channel 2
+#define ARDUNXT_RCPOS_CHAN3   (0x72)    // Remote Control Channel 3
+#define ARDUNXT_RCPOS_CHAN4   (0x73)    // Remote Control Channel 4
+#define ARDUNXT_RCPOS_CHAN5   (0x74)    // Remote Control Channel 5
+#define ARDUNXT_RCPOS_CHAN6   (0x75)    // Remote Control Channel 6
+#define ARDUNXT_RCPOS_CHAN7   (0x76)    // Remote Control Channel 7
+
+#define ARDUNXT_MUX_MODE      (0x77)    // Hardware multiplexer mode (0=Radio Control, 1=NXT Control)
 
 //
 // GPS Data Block
 //
-#define ARDUNXT_GPSDATA       (0x70)    // GPS Data Block (start address)
+#define ARDUNXT_GPSDATA       (0x78)    // GPS Data Block (start address)
 #define ARDUNXT_GPSSIZE       (0x12)    // Size of the complete data block
-#define ARDUNXT_GPSTIME       (0x70)    // Time in milliseconds (Time of Week)
-#define ARDUNXT_GPSLAT        (0x74)    // Latitude (min/10000)
-#define ARDUNXT_GPSLONG       (0x78)    // Longitude (min/10000)
-#define ARCUNXT_GPSALT        (0x7C)    // Altitude (m/10)
-#define ARDUNXT_GPSSPEED      (0x7E)    // Speed (cm/s)
-#define ARDUNXT_GPSHEAD       (0x80)    // Heading (degrees/100)
+#define ARDUNXT_GPSTIME       (0x78)    // Time in milliseconds (Time of Week)
+#define ARDUNXT_GPSLAT        (0x7C)    // Latitude (min/10000)
+#define ARDUNXT_GPSLONG       (0x80)    // Longitude (min/10000)
+#define ARCUNXT_GPSALT        (0x84)    // Altitude (m/10)
+#define ARDUNXT_GPSSPEED      (0x86)    // Speed (cm/s)
+#define ARDUNXT_GPSHEAD       (0x88)    // Heading (degrees/100)
 
 
-
+//
+// Configuration Bit Values
+//
+#define CONFIG_DSM2           (0x01)    // Enable DSM2 Satellite Receiver (instead of GPS)
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -139,7 +160,7 @@ bool checkErrorStatus(tSensors nPortIndex, const int nReplyLength)
 //
 //                        Send a Message via I2C
 //
-// Sends an arbitrary 4-byte message over an I2C port.
+// Sends an arbitrary (up to) 4-byte message over an I2C port.
 //
 // You'll have to poll the status of the I2C communications channel to tell when the
 // I2C transaction is complete.
@@ -147,11 +168,11 @@ bool checkErrorStatus(tSensors nPortIndex, const int nReplyLength)
 // Usually when writing to device the reply length will be zero.
 //
 //////////////////////////////////////////////////////////////////////////////////////////
-bool sendI2CMessage(tSensors nPortIndex, const ubyte kRegisterIndex, const ubyte nByte1, const ubyte nByte2, const ubyte nByte3, const ubyte nByte4)
+bool sendI2CMessage(tSensors nPortIndex, const ubyte kRegisterIndex, const ubyte NBytes, const ubyte nByte1, const ubyte nByte2, const ubyte nByte3, const ubyte nByte4)
 {
   const ubyte nMsg[] =
 	{
-		2 + 4,               // This is length field for transmitted message.
+		2 + NBytes,          // This is length field for transmitted message.
 		ARDUNXT_I2C_ADDR,    // The I2C address of the device.
 		kRegisterIndex,      // The internal register index within the sensor to start writeing at.
 		nByte1,
@@ -310,7 +331,25 @@ bool ArduNXTSendServo(tSensors nPortIndex, ubyte nByte1, ubyte nByte2, ubyte nBy
 {
   int nReadTime = nSysTime;
 
-  while (!sendI2CMessage(nPortIndex, NXTSERVO_QPOS_CHAN1, nByte1, nByte2, nByte3, nByte4))
+  while (!sendI2CMessage(nPortIndex, ARDUNXT_QPOS_CHAN1, 4, nByte1, nByte2, nByte3, nByte4))
+  {
+    // wait until we can send the data
+    if ((nSysTime - nReadTime) > 100)
+    {
+      // if we haven't been able to send after 100mS then we are not going to.
+      return false;
+    }
+    wait1Msec(1);
+  }
+  return true;
+}
+
+// Send Configuration Byte to ArduNXT
+bool ArduNXTSendConfig(tSensors nPortIndex, ubyte nByte1)
+{
+  int nReadTime = nSysTime;
+
+  while (!sendI2CMessage(nPortIndex, ARDUNXT_CONFIG, 1, nByte1, 0, 0, 0))
   {
     // wait until we can send the data
     if ((nSysTime - nReadTime) > 100)
@@ -324,12 +363,9 @@ bool ArduNXTSendServo(tSensors nPortIndex, ubyte nByte1, ubyte nByte2, ubyte nBy
 }
 
 
-
-
-
 task main()
 {
-	int    u16RC[4];                       // 4 Remote Control Input Channels
+	int    u16RC[MAX_NUM_RCCHANNELS];             // 4 Remote Control Input Channels
   ubyte  u8Servo[4];
 
   // Initialisation
@@ -339,6 +375,7 @@ task main()
   u8Servo[3] = 150;
 
   initializeI2CSensor(ArduNXT, true);
+  ArduNXTSendConfig(ArduNXT, CONFIG_DSM2);
   ArduNXTSendServo(ArduNXT, u8Servo[0], u8Servo[1], u8Servo[2], u8Servo[3]);
   nxtDisplayBigTextLine(0, "ArduNXT");
 
@@ -346,13 +383,13 @@ task main()
   while (true)
   {
     // Read Remote Control Inputs
-    if (ArduNXTReadRemoteControl(ArduNXT, u16RC,  4))
+    if (ArduNXTReadRemoteControl(ArduNXT, u16RC,  MAX_NUM_RCCHANNELS))
     {
       // Display the values
-       nxtDisplayTextLine(4, "Ch 0:%4d uS", u16RC[0]);
-       nxtDisplayTextLine(5, "Ch 1:%4d uS", u16RC[1]);
-       nxtDisplayTextLine(6, "Ch 2:%4d uS", u16RC[2]);
-       nxtDisplayTextLine(7, "Ch 3:%4d uS", u16RC[3]);
+       nxtDisplayTextLine(4, "0:%4d 4:%4d", u16RC[0], u16RC[4]);
+       nxtDisplayTextLine(5, "1:%4d 5:%4d", u16RC[1], u16RC[5]);
+       nxtDisplayTextLine(6, "2:%4d 6:%4d", u16RC[2], u16RC[6]);
+       nxtDisplayTextLine(7, "3:%4d uS", u16RC[3]);
     }
     else
     {
@@ -364,10 +401,10 @@ task main()
 
     // Control Servo Outputs (based on the RC Inputs)
     // Reversed - so that you can tell the difference between direct RC control and ArduNXT control
-    if (u16RC[0])    u8Servo[0] = 400-(u16RC[0]/10);
-    if (u16RC[1])    u8Servo[1] = 400-(u16RC[1]/10);
-    if (u16RC[2])    u8Servo[2] = 400-(u16RC[2]/10);
-    if (u16RC[3])    u8Servo[3] = 400-(u16RC[3]/10);
+    if (u16RC[0])    u8Servo[0] = 300-(u16RC[0]/10);  // 500 - 1500 - 2500: 50 - 150 - 250: 250 - 150 - 50
+    if (u16RC[1])    u8Servo[1] = 300-(u16RC[1]/10);
+    if (u16RC[2])    u8Servo[2] = 300-(u16RC[2]/10);
+    if (u16RC[3])    u8Servo[3] = 300-(u16RC[3]/10);
 
     if (ArduNXTSendServo(ArduNXT, u8Servo[0], u8Servo[1], u8Servo[2], u8Servo[3]))
     {
@@ -379,7 +416,7 @@ task main()
     }
 
     // Read the GPS Data
-    ArduNXTReadGPS(ArduNXT);
+    // ArduNXTReadGPS(ArduNXT);
 
     wait1Msec(10);
   }

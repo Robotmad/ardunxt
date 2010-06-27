@@ -37,7 +37,7 @@ extern void twi4nxt_attachSlaveRxEvent( void (*)(byte*, uint8_t) );
 extern void twi4nxt_attachSlaveTxEvent( void (*)(void) );
 
 #define TITLE_STRING    "ArduNXT Universal RC Interface"
-#define VERSION_STRING  "V1.08"            // This is NOT the same as the version reported over the NXT interface 
+#define VERSION_STRING  "V1.09"            // This is NOT the same as the version reported over the NXT interface 
                                            // which is defined in NXTI2C.pde
 
 // Select the Baud rate you want to use:

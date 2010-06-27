@@ -412,8 +412,10 @@ void NXT_Handler(void)
                           RCInput_SetCentre();
                           break;
 
-			case 2:
-				break;
+						case 2:
+							Serial.println("Rq DSM2 Binding");
+							g_DSM2MsgFlags.bBindRq = TRUE;
+							break;
 
                         default:
                            break;

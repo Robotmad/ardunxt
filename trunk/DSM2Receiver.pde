@@ -12,7 +12,8 @@
  *  You need to bind the satellite reciever with the transmitter 
  *  by connecting it to a satellite compatible recevier (e.g. AR6200)
  *  before it can be used with this code.  It may be possible to provide
- *  support for binding in future.
+ *  support for binding in future. Initial attempts to get the receiver
+ *  into binding mode have not been successful so far. 
  *
  */
 
@@ -37,9 +38,9 @@
 
 #define MAX_NUM_CHANNELS			(7)					// Maximum number of Remote Control Channels
 #define DSM2_SIGNAL_PIN				(0)					// Pin to which the Receiver is connected
-#define DSM2_SERIAL_BAUD			(115200)			// Baud Rate used for DSM2 satellite receiver	
-#define DSM2_MAX_INTRA_FRAME_GAP	(2)					// Maximum gap between bytes within a single frame
-														// - any gap larger than this causes frame decoding to be reset		
+#define DSM2_SERIAL_BAUD			(115200)			        // Baud Rate used for DSM2 satellite receiver	
+#define DSM2_MAX_INTRA_FRAME_GAP	        (2)					// Maximum gap between bytes within a single frame
+											// - any gap larger than this causes frame decoding to be reset		
 
 // Status LED:
 // Off -      No Serial Input detected
@@ -49,14 +50,14 @@
 // If you want an LED to indicate the state of the Receiver define which pin it is on here
 // obviously you will need to be careful not to make use of this pin elsewhere in your code.
 // If you don't want a Receiver status LED then do not define DSM2_LED_PIN
-#define DSM2_LED_PIN			           		(12)
+#define DSM2_LED_PIN	           		(12)
 
 // Define the maximum allowed time between receiving valid frames for the LED to remain on
 #define DSM2_LED_TIMEOUT                        (40)	 // milli seconds
 
 // LED Flash patterns
 #define DSM2_LED_FLASH_PERIOD                   (500)	// milli seconds flash period when searching 
-#define DSM2_LED_BIND_PERIOD					(200)	// milli seconds flash period when binding	
+//#define DSM2_LED_BIND_PERIOD			(200)	// milli seconds flash period when binding	
 
 //---------------------------------------------------------------------
 // Macro Definitions
@@ -69,7 +70,7 @@
 #define DSM2_LED_STATE() (TRUE)
 #endif
 
-#define DSM2BUFF_SIZE						(14U)	// 2 bytes per channel
+#define DSM2BUFF_SIZE					(14U)	// 2 bytes per channel
 
 // DSM2 reception state machine states
 #define STATE_WAITING_FOR_START				(1)
@@ -77,11 +78,11 @@
 #define STATE_COUNTING_BYTES 				(3)
 
 // DSM2 binding mode state machine states
-#define DSM2_BIND_STATE_INIT				(0)
-#define DSM2_BIND_STATE_START				(1)
-#define DSM2_BIND_STATE_TOGGLE				(2)
-#define DSM2_BIND_STATE_END					(3)
-#define DSM2_BIND_STATE_WAIT_FOR_SIGNAL		(4)
+//#define DSM2_BIND_STATE_INIT				(0)
+//#define DSM2_BIND_STATE_START				(1)
+//#define DSM2_BIND_STATE_TOGGLE			(2)
+//#define DSM2_BIND_STATE_END				(3)
+//#define DSM2_BIND_STATE_WAIT_FOR_SIGNAL	        (4)
 
 
 #ifndef cbi
@@ -92,14 +93,14 @@
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
 #endif
 
-// Flags to indicate which aspects of the GPS data have been received
+// Flags to indicate various things
 typedef union {
   struct {
     unsigned bValid:1;          // DSM2 Status
     unsigned bUpdate:1;         // Flag to indicate that data has been updated (i.e. a full set of new values)
     unsigned bPresent:1;        // DSM2 module detected
-	unsigned bBinding:1;		// Binding Mode 
-	unsigned bBindRq:1;			// Request for Binding Mode
+//  unsigned bBinding:1;        // Binding Mode 
+//  unsigned bBindRq:1;		// Request for Binding Mode
   };
   struct {
     UINT_8 u8Value;
@@ -107,7 +108,7 @@ typedef union {
 } DSM2MsgFlags;
 
 // Global variables
-unsigned int					 g_u16DSM2Ch[MAX_NUM_CHANNELS];
+unsigned int				 g_u16DSM2Ch[MAX_NUM_CHANNELS];
 DSM2MsgFlags	        		 g_DSM2MsgFlags;
 
 // Local variables
@@ -119,7 +120,7 @@ static byte  g_au8DSM2Buffer0[DSM2BUFF_SIZE];
 static byte  g_u8DSM2WriteIndex0;
 static byte  m_u8FrameBytes;
 static unsigned long m_DSM2_timer;
-static byte m_DSM2BindState;
+//static byte m_DSM2BindState;
 
 
 
@@ -204,7 +205,7 @@ void DSM2_CommsHandler(void)
 				if (DSM2_Decode())
 				{
 					// If we have now recived a valid message then we are not in binding mode anymore (if we were in this mode)
-					g_DSM2MsgFlags.bBinding = FALSE;
+//					g_DSM2MsgFlags.bBinding = FALSE;
 				}
 				bExit = TRUE;  // Don't allow more than one message to be decoded per execution of the handler
 				m_u8RxState = STATE_WAITING_FOR_START;
@@ -219,20 +220,197 @@ void DSM2_CommsHandler(void)
 
 	if ((millis() - DSM2_time_of_last_byte) > DSM2_MAX_INTRA_FRAME_GAP)
 	{
-		// There has been a long gap since the last byte - so resent the protocol interpreter to the beginning 
+		// There has been a long gap since the last byte - so reset the protocol interpreter to the beginning 
 		m_u8RxState = STATE_WAITING_FOR_START;
 	}
 }
 
 
 
-#define DSM2_BIND_HIGH_PERIOD1		(100)	// Time in mS of initial high 
-#define DSM2_BIND_HIGH_PERIOD2		(100)	// Time in mS of final high 
-#define DSM2_SIGNAL_PIN				(0)
 
 /****************************************************************
 *
 ****************************************************************/
+void DSM2_Handler(void)
+{
+//	if (g_DSM2MsgFlags.bBindRq)
+//	{
+//		// Action Request to enter Binding Mode
+//		m_DSM2BindState = DSM2_BIND_STATE_INIT;
+//		g_DSM2MsgFlags.bBinding = TRUE;
+//		g_DSM2MsgFlags.bBindRq = FALSE;
+//	}
+
+//	if (g_DSM2MsgFlags.bBinding)
+//	{
+//		// Binding Mode
+//		DSM2_BindHandler();
+//	}
+//	else
+	{
+		// We are not in Binding Mode - just attempt to receive data from the receiver
+		DSM2_CommsHandler();
+		DSM2_Timers();
+	}
+}
+
+/****************************************************************
+*
+****************************************************************/
+void DSM2_Timers(void)
+{
+	// Check for timeout
+	if (g_DSM2MsgFlags.bValid)						// Not really used at present - but would be necessary if a future receiver requires multiple frames for a full update
+	{
+		if ((millis() - m_DSM2_timer) > DSM2_LED_TIMEOUT)
+		{
+			DSM2_LED(LOW);							// If we don't receive any valid frames in defined time turn off LED...
+			m_DSM2_timer = millis();					// restart timer for next period
+    
+			// Discard any partially received data  
+			g_DSM2MsgFlags.bValid = FALSE;
+		}
+	}
+	else if (g_DSM2MsgFlags.bPresent)
+	{
+		// Although we don't have a frame we have detected the presence of data - so we are searching for frames
+		if (m_DSM2_timer)
+		{
+			if ((millis() - m_DSM2_timer) > DSM2_LED_FLASH_PERIOD)
+			{
+				// On or Off period has finished...
+				DSM2_LED(DSM2_LED_STATE()?LOW:HIGH);   // Toggle LED On/Off 
+				m_DSM2_timer = millis();                 // restart timer for next period
+				g_DSM2MsgFlags.bPresent = FALSE;       // We need to receive something from the DSM2 receiver to indicate that it is present
+			}
+		}
+		else
+		{
+			DSM2_LED(HIGH);                       // Turn LED On 
+			m_DSM2_timer = millis();                // Start timer for On period
+		}
+	}
+	else if (m_DSM2_timer)
+	{
+		if ((millis() - m_DSM2_timer) > DSM2_LED_FLASH_PERIOD)
+		{
+			// DSM2 satellite receiver not present
+			DSM2_LED(LOW);
+			m_DSM2_timer = 0U;
+		}
+	}
+}
+
+
+
+#define DSM2_CENTRE	(512)		// A value of 512 represents the central stick position
+#define DSM2_SCALE	(25)		// Scale factor x10 (so that we can stick to integer maths)	
+
+/****************************************************************
+*
+****************************************************************/
+// Decode frame pointed to by m_pDSM2;
+bool DSM2_Decode(void)
+{
+	byte u8Byte;
+	byte u8Channel;
+	byte i;
+
+//	Serial.print("D");  
+	
+	for (i = 0; i < MAX_NUM_CHANNELS; i++)
+	{
+            u8Byte = *m_pDSM2++;
+	    u8Channel = u8Byte >> 2;
+//	    Serial.print((int)u8Channel);
+	    if (u8Channel < MAX_NUM_CHANNELS)
+	    {
+		// Valid channel number
+		g_u16DSM2Ch[u8Channel] = ((u8Byte & 0x03) << 8) + *m_pDSM2++;
+	    }
+	    else
+	    {
+		// Channel number error
+		Serial.print("E");  
+		return (FALSE);
+	    }
+	}
+        g_DSM2MsgFlags.bValid = TRUE;
+
+	// Do we have a complete set of good data (yes because we only require a single frame at present)
+	if (g_DSM2MsgFlags.bValid)
+	{
+		// We have a full new set of data - use it as an update
+		g_DSM2MsgFlags.bUpdate = TRUE;
+
+		// Convert received values to pulse widths
+                for (i = 0U; i < NUM_RCI_CH; i++)
+	        {
+			if (g_u16DSM2Ch[i])
+			{
+				// (160 - 500 - 850 ish values received)
+				// Convert into pulse width in uS for use as if it had been measured from PWM
+				g_u16Pulse[i] = 1500 + (DSM2_SCALE * ((int)g_u16DSM2Ch[i] - DSM2_CENTRE)/10);
+				g_RCIFlags[i].bValid = TRUE;
+				g_RCIFlags[i].bUpdate = TRUE;
+			}
+			else if (g_u16Pulse[i])
+			{
+				// This channel is unused/off
+				g_u16Pulse[i] = 0;
+				g_RCIFlags[i].bValid = FALSE;
+				g_RCIFlags[i].bUpdate = TRUE;
+			}
+		}
+		// Mark all components as false so that we do not recognise another update until all have been refreshed
+		g_DSM2MsgFlags.bValid = FALSE;
+    
+		if (g_DiagnosticsFlags.bRCInput) DSM2_Diagnostics();
+		m_DSM2_timer = millis();				// Remember time of frame (for timeout)   
+		DSM2_LED(HIGH);						// Turn LED On when valid frame is received.  
+	}
+	return(TRUE);
+}
+
+
+// DSM2 frame data buffering
+// Protection against buffer overrun is provided by the check on the message length 
+void DSM2_Byte(void)
+{
+  g_au8DSM2Buffer0[g_u8DSM2WriteIndex0++] = m_u8RxByte;
+}
+
+
+void DSM2_Diagnostics(void)
+{
+  // Diagnostics for DSM2
+  Serial.print("DSM2: ");
+  Serial.print((int)m_u8DSM2Quality);
+  Serial.print(", ");
+  Serial.print((int)g_u16DSM2Ch[0]);
+  Serial.print(", ");
+  Serial.print((int)g_u16DSM2Ch[1]);
+  Serial.print(", ");
+  Serial.print((int)g_u16DSM2Ch[2]);
+  Serial.print(", ");
+  Serial.print((int)g_u16DSM2Ch[3]);
+  Serial.print(", ");
+  Serial.print((int)g_u16DSM2Ch[4]);
+  Serial.print(", ");
+  Serial.print((int)g_u16DSM2Ch[5]);
+  Serial.print(", ");
+  Serial.print((int)g_u16DSM2Ch[6]);
+  Serial.println(".");
+}
+
+
+/*	
+// !!!BINDING IS NOT WORKING!!!
+#define DSM2_BIND_HIGH_PERIOD1		(100)	// Time in mS of initial high 
+#define DSM2_BIND_HIGH_PERIOD2		(100)	// Time in mS of final high 
+#define DSM2_SIGNAL_PIN				(0)
+
+
 void DSM2_BindHandler(void)
 {
 	static unsigned long	 BindTimeout;
@@ -324,182 +502,6 @@ void DSM2_BindHandler(void)
 		m_DSM2_timer = millis();					// Start timer for On period
 	}
 }
+*/
 
-
-
-/****************************************************************
-*
-****************************************************************/
-void DSM2_Handler(void)
-{
-	if (g_DSM2MsgFlags.bBindRq)
-	{
-		// Action Request to enter Binding Mode
-		m_DSM2BindState = DSM2_BIND_STATE_INIT;
-		g_DSM2MsgFlags.bBinding = TRUE;
-		g_DSM2MsgFlags.bBindRq = FALSE;
-	}
-
-	if (g_DSM2MsgFlags.bBinding)
-	{
-		// Binding Mode
-		DSM2_BindHandler();
-	}
-	else
-	{
-		// We are not in Binding Mode - just attempt to receive data from the receiver
-		DSM2_CommsHandler();
-		DSM2_Timers();
-	}
-}
-
-/****************************************************************
-*
-****************************************************************/
-void DSM2_Timers(void)
-{
-	// Check for timeout
-	if (g_DSM2MsgFlags.bValid)						// Not really used at present - but would be necessary if a future receiver requires multiple frames for a full update
-	{
-		if ((millis() - m_DSM2_timer) > DSM2_LED_TIMEOUT)
-		{
-			DSM2_LED(LOW);							// If we don't receive any valid frames in defined time turn off LED...
-			m_DSM2_timer = millis();					// restart timer for next period
-    
-			// Discard any partially received data  
-			g_DSM2MsgFlags.bValid = FALSE;
-		}
-	}
-	else if (g_DSM2MsgFlags.bPresent)
-	{
-		// Although we don't have a frame we have detected the presence of data - so we are searching for frames
-		if (m_DSM2_timer)
-		{
-			if ((millis() - m_DSM2_timer) > DSM2_LED_FLASH_PERIOD)
-			{
-				// On or Off period has finished...
-				DSM2_LED(DSM2_LED_STATE()?LOW:HIGH);   // Toggle LED On/Off 
-				m_DSM2_timer = millis();                 // restart timer for next period
-				g_DSM2MsgFlags.bPresent = FALSE;       // We need to receive something from the DSM2 receiver to indicate that it is present
-			}
-		}
-		else
-		{
-			DSM2_LED(HIGH);                       // Turn LED On 
-			m_DSM2_timer = millis();                // Start timer for On period
-		}
-	}
-	else if (m_DSM2_timer)
-	{
-		if ((millis() - m_DSM2_timer) > DSM2_LED_FLASH_PERIOD)
-		{
-			// DSM2 satellite receiver not present
-			DSM2_LED(LOW);
-			m_DSM2_timer = 0U;
-		}
-	}
-}
-
-
-
-#define DSM2_CENTRE	(512)		// A value of 512 represents the central stick position
-#define DSM2_SCALE	(25)		// Scale factor x10 (so that we can stick to integer maths)	
-
-/****************************************************************
-*
-****************************************************************/
-// Decode frame pointed to by m_pDSM2;
-bool DSM2_Decode(void)
-{
-	byte u8Byte;
-	byte u8Channel;
-	byte i;
-
-//	Serial.print("D");  
-	
-	for (i = 0; i < MAX_NUM_CHANNELS; i++)
-	{
-		u8Byte = *m_pDSM2++;
-	    u8Channel = u8Byte >> 2;
-//		Serial.print((int)u8Channel);
-		if (u8Channel < MAX_NUM_CHANNELS)
-	    {
-			// Valid channel number
-			g_u16DSM2Ch[u8Channel] = ((u8Byte & 0x03) << 8) + *m_pDSM2++;
-		}
-		else
-		{
-			// Channel number error
-			Serial.print("E");  
-			return (FALSE);
-		}
-	}
-    g_DSM2MsgFlags.bValid = TRUE;
-
-	// Do we have a complete set of good data (yes because we only require a single frame at present)
-	if (g_DSM2MsgFlags.bValid)
-	{
-		// We have a full new set of data - use it as an update
-		g_DSM2MsgFlags.bUpdate = TRUE;
-
-		// Convert received values to pulse widths
-        for (i = 0U; i < NUM_RCI_CH; i++)
-	    {
-			if (g_u16DSM2Ch[i])
-			{
-				// (160 - 500 - 850 ish values received)
-				// Convert into pulse width in uS for use as if it had been measured from PWM
-				g_u16Pulse[i] = 1500 + (DSM2_SCALE * ((int)g_u16DSM2Ch[i] - DSM2_CENTRE)/10);
-				g_RCIFlags[i].bValid = TRUE;
-				g_RCIFlags[i].bUpdate = TRUE;
-			}
-			else if (g_u16Pulse[i])
-			{
-				// This channel is unused/off
-				g_u16Pulse[i] = 0;
-				g_RCIFlags[i].bValid = FALSE;
-				g_RCIFlags[i].bUpdate = TRUE;
-			}
-		}
-		// Mark all components as false so that we do not recognise another update until all have been refreshed
-		g_DSM2MsgFlags.bValid = FALSE;
-    
-		if (g_DiagnosticsFlags.bRCInput) DSM2_Diagnostics();
-		m_DSM2_timer = millis();				// Remember time of frame (for timeout)   
-		DSM2_LED(HIGH);							// Turn LED On when valid frame is received.  
-	}
-	return(TRUE);
-}
-
-
-// DSM2 frame data buffering
-// Protection against buffer overrun is provided by the check on the message length 
-void DSM2_Byte(void)
-{
-  g_au8DSM2Buffer0[g_u8DSM2WriteIndex0++] = m_u8RxByte;
-}
-
-
-void DSM2_Diagnostics(void)
-{
-  // Diagnostics for DSM2
-  Serial.print("DSM2: ");
-  Serial.print((int)m_u8DSM2Quality);
-  Serial.print(", ");
-  Serial.print((int)g_u16DSM2Ch[0]);
-  Serial.print(", ");
-  Serial.print((int)g_u16DSM2Ch[1]);
-  Serial.print(", ");
-  Serial.print((int)g_u16DSM2Ch[2]);
-  Serial.print(", ");
-  Serial.print((int)g_u16DSM2Ch[3]);
-  Serial.print(", ");
-  Serial.print((int)g_u16DSM2Ch[4]);
-  Serial.print(", ");
-  Serial.print((int)g_u16DSM2Ch[5]);
-  Serial.print(", ");
-  Serial.print((int)g_u16DSM2Ch[6]);
-  Serial.println(".");
-}
-	
 

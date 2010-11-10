@@ -412,10 +412,10 @@ void NXT_Handler(void)
                           RCInput_SetCentre();
                           break;
 
-						case 2:
-							Serial.println("Rq DSM2 Binding");
-							g_DSM2MsgFlags.bBindRq = TRUE;
-							break;
+			case 2:
+//			  Serial.println("Rq DSM2 Binding");
+//			  g_DSM2MsgFlags.bBindRq = TRUE;
+			  break;
 
                         default:
                            break;
@@ -436,7 +436,7 @@ void NXT_Handler(void)
                             m_u16ServoPosition[i] = 0;  // Clear current position so that the Quick position takes effect for the next frame
                             m_NXTInterfaceData.Fields.u16ServoPosition[i] = m_NXTInterfaceData.Fields.u8QuickPosition[i] * 10;
 
-					// Clear out record of Quck position 'request' now that we have actioned it
+			    // Clear out record of Quck position 'request' now that we have actioned it
                             m_NXTInterfaceData.Fields.u8QuickPosition[i] = 0;
                           }
                         }                                             	

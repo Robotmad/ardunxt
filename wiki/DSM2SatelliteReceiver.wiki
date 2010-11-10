@@ -17,3 +17,4 @@ You will also need to bind the satellite receiver with your transmitter before u
 
 == Software ==
 The Satellite Receiver serial data uses a rate of 115200 Baud, as the same rate must be used for input and output this becomes the baud rate for diagnostic output.
+A package of software just to demonstrate the capability of this Satellite Receiver has been prepared for download [http://code.google.com/p/ardunxt/downloads/detail?name=DSM2Demo.zip DSM2Demo.zip] 

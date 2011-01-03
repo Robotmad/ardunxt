@@ -413,8 +413,6 @@ void NXT_Handler(void)
                           break;
 
 						case 2:
-							Serial.println("Rq DSM2 Binding");
-							g_DSM2MsgFlags.bBindRq = TRUE;
 //			  Serial.println("Rq DSM2 Binding");
 //			  g_DSM2MsgFlags.bBindRq = TRUE;
 							break;

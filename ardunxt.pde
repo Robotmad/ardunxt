@@ -45,7 +45,7 @@ extern void twi4nxt_attachSlaveTxEvent( void (*)(void) );
 //#define SERIAL_BAUD     (38400)            // Baud Rate used for GPS and Diagnostics
 
 
-#define NUM_RCI_CH		(7U)			// Number of RCInput Channels (e.g. direct from DSM2 satellite receiver)
+#define NUM_RCI_CH			(7U)			// Number of RCInput Channels (e.g. direct from DSM2 satellite receiver)
 #define NUM_SERVO_CH		(4U)			// total number of servo output channels
 
 
@@ -294,5 +294,6 @@ void Save_Settings(void)
   eeprom_write_byte((uint8_t *)EE_DIAGNOSTICS_FLAGS, g_DiagnosticsFlags.u8Value);
   eeprom_write_byte((uint8_t *)EE_CONFIGURATION_FLAGS, g_ConfigurationFlags.u8Value);
 }
+
 
 

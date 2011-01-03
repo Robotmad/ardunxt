@@ -20,20 +20,28 @@
 // ArduNXT Device I2C Address
 #define ARDUNXT_I2C_ADDR      (0xB0)    // When used in Mindsensors NXT Servo Sensor compatibility mode
 
+
+//
+// ArduNXT Commands
+// ================
+//
+#define ARDUNXT_CMD_BIND      (2)       // Put DSM2 Satellite Receiver into Binding Mode
+
+//
 // ArduNXT Address Map
 // ===================
 //
 #define ARDUNXT_CONFIG        (0x40)    // Configuration register
-#define ARDUNXT_CMD           (0x41)    // Command register
+#define ARDUNXT_COMMAND       (0x41)    // Command register
 
 //
 // Servo Channel Addresses are compatible with Mindsensors NXT Servo Sensor
 //
 // Full resolution position register, can be read and written (value is 2 bytes, 16-bit, pulse width in uS)
 #define ARDUNXT_SERVO_CHAN1   (0x42)    // Servo Channel 1 LSB (MSB is at address+1)
-#define ARDUNXT_SERVO_CHAN2   (0x44)    // Servo Channel 1 LSB
-#define ARDUNXT_SERVO_CHAN3   (0x46)    // Servo Channel 1 LSB
-#define ARDUNXT_SERVO_CHAN4   (0x48)    // Servo Channel 1 LSB
+#define ARDUNXT_SERVO_CHAN2   (0x44)    // Servo Channel 2 LSB
+#define ARDUNXT_SERVO_CHAN3   (0x46)    // Servo Channel 3 LSB
+#define ARDUNXT_SERVO_CHAN4   (0x48)    // Servo Channel 4 LSB
 
 // Quick position register, can only be written (value is single byte pulse width in units of 10uS)
 #define ARDUNXT_QPOS_CHAN1    (0x5A)    // Servo channel 1 quick position
@@ -363,6 +371,26 @@ bool ArduNXTSendConfig(tSensors nPortIndex, ubyte nByte1)
 }
 
 
+// Send Configuration Byte to ArduNXT
+bool ArduNXTSendCommand(tSensors nPortIndex, ubyte nByte1)
+{
+  int nReadTime = nSysTime;
+
+  while (!sendI2CMessage(nPortIndex, ARDUNXT_COMMAND, 1, nByte1, 0, 0, 0))
+  {
+    // wait until we can send the data
+    if ((nSysTime - nReadTime) > 100)
+    {
+      // if we haven't been able to send after 100mS then we are not going to.
+      return false;
+    }
+    wait1Msec(1);
+  }
+  return true;
+}
+
+
+
 task main()
 {
 	int    u16RC[MAX_NUM_RCCHANNELS];             // 4 Remote Control Input Channels
@@ -378,6 +406,14 @@ task main()
   ArduNXTSendConfig(ArduNXT, CONFIG_DSM2);
   ArduNXTSendServo(ArduNXT, u8Servo[0], u8Servo[1], u8Servo[2], u8Servo[3]);
   nxtDisplayBigTextLine(0, "ArduNXT");
+
+  //wait10Msec(200);
+  //nxtDisplayBigTextLine(0, "Binding");
+
+  //ArduNXTSendCommand(ArduNXT, ARDUNXT_CMD_BIND);
+
+  wait10Msec(500);
+  //nxtDisplayBigTextLine(0, "ArduNXT");
 
   // Monitoring Loop
   while (true)

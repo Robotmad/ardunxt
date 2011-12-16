@@ -27,7 +27,7 @@ void Diagnostics_Handler(void)
   if (MIN_REPORTED_EXECUTION_TIME < u16ExecutionTime)
   {
       // Report a long execution time
-      Serial.print("Execution (mS): ");
+      Serial.print(F("Execution (mS): "));
       Serial.println(u16ExecutionTime);
   }
   m_u32LastLoopTime = u32Now;
@@ -37,7 +37,7 @@ void Diagnostics_Handler(void)
   {
     // Time to report number of executions
     m_u32LastDiagTime = u32Now;
-    Serial.print("Loops: ");
+    Serial.print(F("Loops: "));
     Serial.println(m_u32Loops);    
     m_u32Loops = 0;
   }

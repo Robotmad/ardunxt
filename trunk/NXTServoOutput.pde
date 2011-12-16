@@ -233,7 +233,7 @@ void pulse_servo_0(unsigned int u16PulseWidth)
  
     if (g_DiagnosticsFlags.bServoOutput)
     {
-      Serial.print("Servo 0: ");
+      Serial.print(F("Servo 0: "));
       Serial.println(u16PulseWidth);
     }
   }
@@ -271,7 +271,7 @@ void pulse_servo_1(unsigned int u16PulseWidth)
 
     if (g_DiagnosticsFlags.bServoOutput)
     {
-      Serial.print("Servo 1: ");
+      Serial.print(F("Servo 1: "));
       Serial.println(u16PulseWidth);
     }
   }
@@ -296,7 +296,7 @@ void pulse_servo_2(unsigned int u16PulseWidth)
 
     if (g_DiagnosticsFlags.bServoOutput)
     {
-      Serial.print("Servo 2: ");
+      Serial.print(F("Servo 2: "));
       Serial.println(u16PulseWidth);
     }
   }
@@ -315,7 +315,7 @@ void pulse_servo_3(unsigned int u16PulseWidth)
     g_u8ExtraServoPulseWidth[1] = u16PulseWidth >> 3;  // i.e. /8 as resolution of Timer2 is 8uS
     if (g_DiagnosticsFlags.bServoOutput)
     {
-      Serial.print("Servo 3: ");
+      Serial.print(F("Servo 3: "));
       Serial.println(u16PulseWidth);
     }
   }

@@ -9,16 +9,6 @@
 // & Remzibi.
 */
 
-// Standard Arduino Serial output is unbuffered so be careful about the impact that lots of diagnostics has on performance.
-// You might like to try an alternative version of the HardwareSerial.h and HardwareSerial.cpp, by Kiril available from:
-// Arduino Forum > Software > Development, at
-// http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?board=dev
-// Search for "Improved HardwareSerial" and use these new files to replace those in hardware/arduino/cores/arduino 
-// There should be enough memory on the ATMEGA328 to increase the buffer sizes too.  These are defined in HardwareSerial.h:
-// #define USART_RX_BUFFER_SIZE  (64)
-// #derine USART_TX_BUFFER_SIZE  (64)
-
-
 //TODO
 // Commands from NXT:
 //  set RC Input centre
@@ -36,9 +26,9 @@
 extern void twi4nxt_attachSlaveRxEvent( void (*)(byte*, uint8_t) );
 extern void twi4nxt_attachSlaveTxEvent( void (*)(void) );
 
-#define TITLE_STRING    "ArduNXT Universal RC Interface"
-#define VERSION_STRING  "V1.09"            // This is NOT the same as the version reported over the NXT interface 
-                                           // which is defined in NXTI2C.pde
+#define TITLE_STRING    F("ArduNXT Universal RC Interface")
+#define VERSION_STRING  F("V1.09")            // This is NOT the same as the version reported over the NXT interface 
+									          // which is defined in NXTI2C.pde
 
 // Select the Baud rate you want to use:
 #define SERIAL_BAUD		(115200)		   // Baud Rate used for DSM2 satellite receiver (and diagnostics)	

@@ -84,7 +84,7 @@ void Multiplexer_Handler(void)
     if (g_DiagnosticsFlags.bMultiplexer)
     {
       // Diagnostics for multiplexer
-      Serial.print("Mode: ");
+      Serial.print(F("Mode: "));
       Serial.println((int)u8Mode);
     }
     m_u8CurrentMode = u8Mode;          

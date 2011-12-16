@@ -283,7 +283,7 @@ void GPS_Handler(void)
 
 void UBX_Decode(void)
 {
-//Serial.print("D");  
+//Serial.print(F("D"));  
 
   switch (m_pGPS[UBX_MSG_ID_INDX])
   {
@@ -315,7 +315,7 @@ void UBX_Decode(void)
     
   default:
     // Unexpected Message ID
-    Serial.print("GPS-UBX NAV ");
+    Serial.print(F("GPS-UBX NAV "));
     Serial.println((int)m_pGPS[UBX_MSG_ID_INDX]);
     break;  
   }
@@ -374,7 +374,7 @@ bool GPS_DecodeSTATUSMessage(void)
 // - 0x05 = Time only fix
 // - 0x06..0xff = reserved
 
-//Serial.print("GPS:STATUS ");  
+//Serial.print(F("GPS:STATUS "));  
 
   if (UBX_STATUS_MSG_LEN == (UINT_8)m_pGPS[UBX_MSG_LEN_INDX])
   {
@@ -389,7 +389,7 @@ bool GPS_DecodeSTATUSMessage(void)
       break;
       
     default:
-//    Serial.print("GPS:STATUS ");  
+//    Serial.print(F("GPS:STATUS "));  
 //    Serial.println((int)m_pGPS[UBX_STATUS_FIX_INDX]);		
       break;	
     }
@@ -399,7 +399,7 @@ bool GPS_DecodeSTATUSMessage(void)
 
 bool GPS_DecodeVELNEDMessage(void)
 {
-//Serial.print("GPS:VELNED ");  
+//Serial.print(F("GPS:VELNED "));  
 
   if (UBX_VELNED_MSG_LEN == (UINT_8)m_pGPS[UBX_MSG_LEN_INDX])
   {
@@ -429,7 +429,7 @@ bool GPS_DecodeVELNEDMessage(void)
 
 bool GPS_DecodePOSLLHMessage(void)
 {
-//Serial.print("GPS:POSLLH ");  
+//Serial.print(F("GPS:POSLLH "));  
 
   if (UBX_POSLLH_MSG_LEN == m_pGPS[UBX_MSG_LEN_INDX])
   {
@@ -511,36 +511,36 @@ void GPS_Diagnostics(void)
 {
   // Diagnostics for GPS    
   // Time
-//  Serial.print("TOW: ");
+//  Serial.print(F("TOW: "));
   Serial.print(m_GPSNew.u32Time);
-//  Serial.print(".");
+//  Serial.print(F("."));
 //  Serial.print((int)m_GPSNew.u8CentiSeconds);
-  Serial.print("mS, ");
+  Serial.print(F("mS, "));
   // Longitude (10,000th Minutes)
-//  Serial.print("Lon: ");
+//  Serial.print(F("Lon: "));
   Serial.print(m_GPSNew.i32Longitude);
-//  Serial.print(" Min(/10,000)");
-  Serial.print(", ");
+//  Serial.print(F(" Min(/10,000)"));
+  Serial.print(F(", "));
   // Latitude (10,000th Minutes)
-//  Serial.print("Lat: ");
+//  Serial.print(F("Lat: "));
   Serial.print(m_GPSNew.i32Latitude);
-//  Serial.print(" Min(/10,000)");
-  Serial.print(", ");
+//  Serial.print(F(" Min(/10,000)"));
+  Serial.print(F(", "));
   // Altitude (m/10 scales to m)
-//  Serial.print("Alt: ");
+//  Serial.print(F("Alt: "));
   Serial.print(m_GPSNew.u16Altitude/10);
-//  Serial.print("m");
-  Serial.print(", ");
+//  Serial.print(F("m"));
+  Serial.print(F(", "));
   // Speed over ground (2D)
-//  Serial.print("SOG: ");
+//  Serial.print(F("SOG: "));
   Serial.print(m_GPSNew.u16Speed);
-//  Serial.print(" cm/s");
-  Serial.print(", ");
+//  Serial.print(F(" cm/s"));
+  Serial.print(F(", "));
   // Heading (100ths of a degree)
-//  Serial.print("COG: ");
+//  Serial.print(F("COG: "));
   Serial.print(m_GPSNew.u16Heading/100);
-//  Serial.println(" Deg(/100)");  }
-  Serial.println(" ");
+//  Serial.println(F(" Deg(/100)"));  }
+  Serial.println(F(" "));
 }
 
 //#endif

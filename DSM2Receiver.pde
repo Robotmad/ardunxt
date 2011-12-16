@@ -183,7 +183,7 @@ void DSM2_CommsHandler(void)
 				// Don't bother to save the byte as we know it must have been 0x01
 				g_u8DSM2WriteIndex0 = 0U;
 				m_u8FrameBytes = DSM2BUFF_SIZE;	// If different transmitters use different length frames we could handle that here				
-				// Serial.print("F:");  
+				// Serial.print(F("F:"));  
 				m_u8RxState = STATE_COUNTING_BYTES;
 			}
 			else
@@ -316,13 +316,13 @@ bool DSM2_Decode(void)
 	byte u8Channel;
 	byte i;
 
-//	Serial.print("D");  
+//	Serial.print(F("D"));  
 	
 	for (i = 0; i < MAX_NUM_CHANNELS; i++)
 	{
             u8Byte = *m_pDSM2++;
 	    u8Channel = u8Byte >> 2;
-//	    Serial.print((int)u8Channel);
+//	    Serial.print(u8Channel);
 	    if (u8Channel < MAX_NUM_CHANNELS)
 	    {
 		// Valid channel number
@@ -331,7 +331,7 @@ bool DSM2_Decode(void)
 	    else
 	    {
 		// Channel number error
-		Serial.print("E");  
+		Serial.print(F("E"));  
 		return (FALSE);
 	    }
 	}
@@ -384,23 +384,23 @@ void DSM2_Byte(void)
 void DSM2_Diagnostics(void)
 {
   // Diagnostics for DSM2
-  Serial.print("DSM2: ");
-  Serial.print((int)m_u8DSM2Quality);
-  Serial.print(", ");
+  Serial.print(F("DSM2: "));
+  Serial.print(m_u8DSM2Quality);
+  Serial.print(F(", "));
   Serial.print((int)g_u16DSM2Ch[0]);
-  Serial.print(", ");
+  Serial.print(F(", "));
   Serial.print((int)g_u16DSM2Ch[1]);
-  Serial.print(", ");
+  Serial.print(F(", "));
   Serial.print((int)g_u16DSM2Ch[2]);
-  Serial.print(", ");
+  Serial.print(F(", "));
   Serial.print((int)g_u16DSM2Ch[3]);
-  Serial.print(", ");
+  Serial.print(F(", "));
   Serial.print((int)g_u16DSM2Ch[4]);
-  Serial.print(", ");
+  Serial.print(F(", "));
   Serial.print((int)g_u16DSM2Ch[5]);
-  Serial.print(", ");
+  Serial.print(F(", "));
   Serial.print((int)g_u16DSM2Ch[6]);
-  Serial.println(".");
+  Serial.println(F("."));
 }
 
 

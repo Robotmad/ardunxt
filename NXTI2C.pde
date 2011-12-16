@@ -552,20 +552,20 @@ static void NXTDiagnostics(void)
 	if (m_u8NXTNumReceived)
 	{
             // Number of bytes received from NXT in monitoring period (excluding the device addressing byte)
-	    Serial.print("Rx ");
+	    Serial.print(F("Rx "));
 	    Serial.println((int)m_u8NXTNumReceived);
 	    m_u8NXTNumReceived = 0;
 	}
 	if (m_u8NXTNumRequests)
 	{
             // Number of bytes requested by the NXT in monitoring period
-	    Serial.print("Rq ");
+	    Serial.print(F("Rq "));
 	    Serial.println((int)m_u8NXTNumRequests);
             m_u8NXTNumRequests = 0;
 	}
         if (m_u8IllegalAddress)
         {
-          Serial.print("Illegal Address ");
+          Serial.print(F("Illegal Address "));
           Serial.println((int)m_u8IllegalAddress);
           m_u8IllegalAddress = 0U;
         }
@@ -612,7 +612,7 @@ void pressure_i2c(void)
     if (0U != (0x01 & data))
     {
     	//Startup procedure is still running
-        Serial.print("Starting ");
+        Serial.print(F("Starting "));
         Serial.println(data); 
     }
     else
@@ -620,11 +620,11 @@ void pressure_i2c(void)
       if (0U != (0x10 & data))
       {
   	// Real Time Error - data was not read in time - clear by reading
-        Serial.print("RTErr ");      
+        Serial.print(F("RTErr "));      
       }
       if (0U != (0x20 & data))
       {
-         Serial.print("DRDY ");
+         Serial.print(F("DRDY "));
 
    	// DRDY - new data ready
    
@@ -646,7 +646,7 @@ void pressure_i2c(void)
         {
           data |= Wire.receive() << 8;
           Serial.print(data);
-          Serial.print(",");
+          Serial.print(F(","));
         }
         
         // Read Pressure
@@ -675,7 +675,7 @@ void pressure_i2c(void)
   else
   {
 	  // Nothing returned
-	  Serial.print("X");
+	  Serial.print(F("X"));
   }
   //Wire.endTransmission();
   // Use data
@@ -706,7 +706,7 @@ void thermo_i2c(void)
       data |= Wire.receive() << 8;
     }
     Serial.print(data);
-    Serial.print(",");
+    Serial.print(F(","));
 	
 	if (Wire.available()) 
     {
@@ -718,7 +718,7 @@ void thermo_i2c(void)
   else
   {
 	  // Nothing returned
-	  Serial.print("X");
+	  Serial.print(F("X"));
   }
   //Wire.endTransmission();
   // Use data

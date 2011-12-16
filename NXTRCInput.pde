@@ -384,8 +384,8 @@ void RCInput_Handler(void)
       // compiler to do some of the address manipulation here first.  
       volatile RCInputFlags  *pRCIFlags = &g_RCIFlags[i];
 
-      //Serial.print((int)i);
-      //Serial.print(":");
+      //Serial.print(i);
+      //Serial.print(F(":"));
 
       // Both rise and fall edges have been timestamped
       // Take a copy of the rise and fall timestamps so that they can be updated in the interrupt routine for the next pulse
@@ -396,7 +396,7 @@ void RCInput_Handler(void)
       {
         // Timer1 wraped around during the pulse measurement - compensate result
         // This is normal behaviour as the timer we are using is not in sync with the received frames
-        //Serial.print("+");
+        //Serial.print(F("+"));
         u16PFall += PWM_PERIOD;  // Can't overflow 16 bits for valid pulse widths
       }
       if (pRCIFlags->bLost)
@@ -404,7 +404,7 @@ void RCInput_Handler(void)
         // We have received more than one pulse since we last computed the pulse width from the rise and fall times
         // The current (most recent) pulse record is still valid and can be used OK
         // if this happens a lot then the this handler is not being called frequently enough
-        Serial.print((int)i);
+        Serial.print(i);
         Serial.println(" ***LostPulse***");
 //      m_u16LostPulses++;
         pRCIFlags->bLost = FALSE;
@@ -420,7 +420,7 @@ void RCInput_Handler(void)
       {
         // One of the flags has been cleared so a new pulse is being measured
         sei();  // Re-enable interrupts
-        Serial.print((int)i);
+        Serial.print(i);
         Serial.println(" ***MidPulse***");
       }
       else
@@ -431,12 +431,12 @@ void RCInput_Handler(void)
         sei();  // re-enable interrupts
 
         // A pair of rise and fall time measurements have been made
-        //Serial.print((int)i);
-        //Serial.print(":");
+        //Serial.print(i);
+        //Serial.print(F(":"));
         //Serial.print(u16PRise);
-        //Serial.print(",");
+        //Serial.print(F(","));
         //Serial.print(u16PFall);
-        //Serial.print(" ");
+        //Serial.print(F(" "));
 
         u16Pulse = (u16PFall - u16PRise);
 
@@ -447,8 +447,8 @@ void RCInput_Handler(void)
         {
           // Pulse Too Short
           m_u16ValidFrames = 0;
-          Serial.print((int)i);
-          Serial.print(" t<");
+          Serial.print(i);
+          Serial.print(F(" t<"));
           Serial.println(MIN_PULSE_WIDTH);
           g_RCIFlags[i].bValid = FALSE;
         }
@@ -456,8 +456,8 @@ void RCInput_Handler(void)
         {
           // Pulse Too Long	
           m_u16ValidFrames = 0;
-          Serial.print((int)i);
-          Serial.print(" t>");
+          Serial.print(i);
+          Serial.print(F(" t>"));
           Serial.println(MAX_PULSE_WIDTH);
           g_RCIFlags[i].bValid = FALSE;          
         }	
@@ -468,7 +468,7 @@ void RCInput_Handler(void)
           g_RCIFlags[i].bValid = TRUE;
           g_RCIFlags[i].bUpdate = TRUE;           
         }
-        //Serial.print(" ");
+        //Serial.print(F(" "));
       }
     }
   }

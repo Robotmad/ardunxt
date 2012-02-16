@@ -22,7 +22,7 @@
 #include <avr/io.h>
 #include <util/twi.h>
 
-// Fucntion Prototypes for integration with twi4nxt code
+// Function Prototypes for integration with twi4nxt code
 extern void twi4nxt_attachSlaveRxEvent( void (*)(byte*, uint8_t) );
 extern void twi4nxt_attachSlaveTxEvent( void (*)(void) );
 
@@ -63,17 +63,17 @@ typedef unsigned long UINT_32;
 // Flags to control which Diagnostics outputs we want to see on the serial port
 typedef union {
   struct {
-    unsigned bGPS:1;                // GPS decoding
-    unsigned bRCInput:1;            // RC Input
-    unsigned bServoOutput:1;        // Servo Output
-    unsigned bNXTInterface:1;       // I2C NXT interface
-    unsigned bMultiplexer:1;        // Multiplexer state
-    unsigned bDigitalInput:1;       // Digital Inputs 
-    unsigned bDigitalOutput:1;      // Digital Outputs
-    unsigned bPerformance:1;        // Software performance metrics
+	unsigned bGPS:1;                // GPS decoding
+	unsigned bRCInput:1;            // RC Input
+	unsigned bServoOutput:1;        // Servo Output
+	unsigned bNXTInterface:1;       // I2C NXT interface
+	unsigned bMultiplexer:1;        // Multiplexer state
+	unsigned bDigitalInput:1;       // Digital Inputs 
+	unsigned bDigitalOutput:1;      // Digital Outputs
+	unsigned bPerformance:1;        // Software performance metrics
   };
   struct {
-    UINT_8 u8Value;
+	UINT_8 u8Value;
   };
 } DiagnosticsFlags;
 
@@ -81,10 +81,10 @@ typedef union {
 // Flags to configure ArduNXT
 typedef union {
   struct {
-    unsigned bDSM2Enable:1;               // Serial Port used for DSM2 satellite receiver
+	unsigned bDSM2Enable:1;               // Serial Port used for DSM2 satellite receiver
   };
   struct {
-    UINT_8 u8Value;
+	UINT_8 u8Value;
   };
 } ConfigurationFlags;
 
@@ -92,11 +92,11 @@ typedef union {
 // Assorted Flags 
 typedef union {
   struct {
-    unsigned bFrameUpdate:1;              // PWM Servo Output Frame Update
-    unsigned bFrameMissed:1;              // PWM Servo Output Frame has been missed - check Diagnostics for loop execution performance...
+	unsigned bFrameUpdate:1;              // PWM Servo Output Frame Update
+	unsigned bFrameMissed:1;              // PWM Servo Output Frame has been missed - check Diagnostics for loop execution performance...
   };
   struct {
-    UINT_8 u8Value;
+	UINT_8 u8Value;
   };
 } MiscFlags;
 
@@ -105,16 +105,16 @@ typedef union {
 typedef union {
   struct {
 //  unsigned bDate:1;  
-    unsigned bTime:1;           // Time
-    unsigned bLatLon:1;         // Latitude and Longitude 
-    unsigned bAltitude:1;       // Altitude 
-    unsigned bSpeed:1;		// Speed and Heding
-    unsigned bValid:1;          // GPS Fix Status (i.e. 2D or better)
-    unsigned bUpdate:1;         // Flag to indicate that data has been updated (i.e. a full set of new values)
-    unsigned bPresent:1;        // GPS module detected
+	unsigned bTime:1;           // Time
+	unsigned bLatLon:1;         // Latitude and Longitude 
+	unsigned bAltitude:1;       // Altitude 
+	unsigned bSpeed:1;		// Speed and Heding
+	unsigned bValid:1;          // GPS Fix Status (i.e. 2D or better)
+	unsigned bUpdate:1;         // Flag to indicate that data has been updated (i.e. a full set of new values)
+	unsigned bPresent:1;        // GPS module detected
   };
   struct {
-    UINT_8 u8Value;
+	UINT_8 u8Value;
   };
 } GPSMsgFlags;
 
@@ -135,19 +135,19 @@ typedef struct
 // Flags for Remote Control PWM Input Channels
 typedef union {
   struct {
-    // High level
-    unsigned bValid:1;       // Flag to indicate that the channel is being received
-    unsigned bUpdate:1;      // Flag to indicate that data has been updated  
+	// High level
+	unsigned bValid:1;       // Flag to indicate that the channel is being received
+	unsigned bUpdate:1;      // Flag to indicate that data has been updated  
 
-    // Low level
-    unsigned bRise:1;        // We have recorded a timestamp for rising edge
-    unsigned bFall:1;        // We have recorded a timestamp for a falling edge
-    unsigned bLost:1;        // We have lost a pulse measurements as the handler was not called frequently enough
-    unsigned bTimerWrap:1;
-    unsigned bWrap:1;        // Flag that we need to add PWM_PERIOD to fall time  
+	// Low level
+	unsigned bRise:1;        // We have recorded a timestamp for rising edge
+	unsigned bFall:1;        // We have recorded a timestamp for a falling edge
+	unsigned bLost:1;        // We have lost a pulse measurements as the handler was not called frequently enough
+	unsigned bTimerWrap:1;
+	unsigned bWrap:1;        // Flag that we need to add PWM_PERIOD to fall time  
   };
   struct {
-    UINT_8 u8Value;
+	UINT_8 u8Value;
   };
 } 
 RCInputFlags;
